@@ -17,7 +17,10 @@ async function initializeScene() {
     const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 10, 0), scene);
 
     const xrHelper = await scene.createDefaultXRExperienceAsync({
-        floorMeshes: [ground]
+        floorMeshes: [ground],
+        inputOptions: {
+            controllerType: "oculusQuest"
+        }
     });
 
     let leftController, rightController;
