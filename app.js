@@ -1,5 +1,7 @@
 
 async function initializeScene() {
+
+try {
     const canvas = document.getElementById("renderCanvas");
     const engine = new BABYLON.Engine(canvas, true);
     const scene = new BABYLON.Scene(engine);
@@ -46,10 +48,13 @@ async function initializeScene() {
     const anchor = new BABYLON.TransformNode("panelAnchor");
     panel.linkToTransformNode(anchor);
 
-    document.getElementById("csvFileInput").addEventListener("change", async function(event) {
-        df = await dfd.readCSV(event.target.files[0]);
-        document.getElementById("csvFileInput").style.display = 'none';
-        canvas.style.display = 'block';
+   
+        const df = await loadCSVData();
+        if (!df) {
+            console.error('Failed to load Dataset.csv');
+            return;
+        }
+        
 
         const wormName = "city_name";
         const TimeAttribute = "time_int";
@@ -285,11 +290,11 @@ async function initializeScene() {
             }
         });
 
+    
 
 
 
-
-    });
+    
 
     engine.runRenderLoop(function() {
         scene.render();
@@ -298,8 +303,21 @@ async function initializeScene() {
     window.addEventListener("resize", function() {
         engine.resize();
     });
+}catch (error) {
+    console.error('Error initializing scene:', error);
 }
 
+}
+async function loadCSVData() {
+    try {
+
+        const df = await dfd.readCSV("./Dataset.csv");
+        return df;
+    } catch (error) {
+        console.error('Error loading CSV:', error);
+        return null;
+    }
+}
 initializeScene();
 
 
