@@ -6,17 +6,23 @@ try {
     const engine = new BABYLON.Engine(canvas, true);
     const scene = new BABYLON.Scene(engine);
 
-    var camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(-60, 10, 45), scene);
-    camera.setTarget(new BABYLON.Vector3(0, 0, 45));
+    var camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(-6.58, 2.72, -5.40), scene);
+    camera.setTarget(new BABYLON.Vector3(24.19, 2.92, 47.08));
     camera.attachControl(canvas, true);
 
-    const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 100, height: 100 }, scene);
+    const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 100, height: 300 }, scene);
     const groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
     groundMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+    groundMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+    groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     ground.material = groundMaterial;
-    ground.position = new BABYLON.Vector3(0, 0, 45);
+    ground.position = new BABYLON.Vector3(5, 0.5, 90);
 
-    const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 10, 0), scene);
+    //const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(5, 0, -50), scene);
+    
+    // light.position = new BABYLON.Vector3(6.465342998504639, 4.947967052459717, 1.6477842330932617);
+    // light.direction = new BABYLON.Vector3(-0.0005480896732761323, 0.2887493048221811, 0.9574045845735318);
+
 
     const xrHelper = await scene.createDefaultXRExperienceAsync({
         floorMeshes: [ground],
@@ -47,6 +53,43 @@ try {
     // Create an anchor for the panel
     const anchor = new BABYLON.TransformNode("panelAnchor");
     panel.linkToTransformNode(anchor);
+
+
+        // Create walls around the ground
+        const wallMaterial = new BABYLON.StandardMaterial("wallMaterial", scene);
+        wallMaterial.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+        //wallMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+        wallMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+        const wallThickness = 0.5;
+        const wallHeight = 10;
+
+        const createWall = (name, width, height, depth, position,wallMaterial) => {
+            const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
+            wall.material = wallMaterial;
+            wall.position = position;
+            
+            return wall;
+        };
+
+        const wall1 = createWall("wall1", 100, wallHeight, wallThickness, new BABYLON.Vector3(5, wallHeight / 2, 240),wallMaterial);
+        const wall2 = createWall("wall2", 100, wallHeight, wallThickness, new BABYLON.Vector3(5, wallHeight / 2, -60),wallMaterial);
+        const wall3 = createWall("wall3", wallThickness, wallHeight, 300, new BABYLON.Vector3(55, wallHeight / 2, 90),wallMaterial);
+        const wall4 = createWall("wall4", wallThickness, wallHeight, 300, new BABYLON.Vector3(-45, wallHeight / 2, 90),wallMaterial);
+        const roof = createWall("roof", 100, wallThickness, 300, new BABYLON.Vector3(5, wallHeight + wallThickness / 2, 90), wallMaterial);
+        // Add 4 point lights at the center of each wall and 1 at the center of the roof
+        const lightIntensity = 0.8;
+        const lightPositions = [
+            new BABYLON.Vector3(5, wallHeight / 2, -60), // Center of front wall
+            new BABYLON.Vector3(5, wallHeight / 2, 240), // Center of back wall
+            new BABYLON.Vector3(-45, wallHeight / 2, 90), // Center of left wall
+            new BABYLON.Vector3(55, wallHeight / 2, 90), // Center of right wall
+            new BABYLON.Vector3(5, wallHeight + 1, 90) // Center of roof
+        ];
+
+        lightPositions.forEach((position, index) => {
+            const light = new BABYLON.PointLight(`pointLight${index + 1}`, position, scene);
+            light.intensity = lightIntensity;
+        });
 
    
         const df = await loadCSVData();
@@ -124,12 +167,16 @@ try {
             var ribbon = BABYLON.Mesh.CreateRibbon(`ribbon_${group}`, paths, false, false, 0, scene);
             const ribbonMaterial = new BABYLON.StandardMaterial(`ribbonMaterial_${group}`, scene);
             ribbonMaterial.diffuseColor = color;
+            //ribbonMaterial.emissiveColor = color;
             ribbonMaterial.backFaceCulling = false;
             ribbon.material = ribbonMaterial;
 
             const parentNode = new BABYLON.TransformNode(`parent_${group}`, scene);
             LineSystem.parent = parentNode;
             ribbon.parent = parentNode;
+
+            parentNode.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
+            parentNode.position = new BABYLON.Vector3(5, 0.5, 90);
             groupMeshes[group] = { parentNode, LineSystem, ribbon };
         }
 
@@ -186,8 +233,8 @@ try {
         };
 
         // Toggle panel visibility and interactivity
-        let isPanelVisible = true;
-        updatePanelPosition();
+        let isPanelVisible = false;
+        //updatePanelPosition();
 
 
 
@@ -291,7 +338,7 @@ try {
         });
 
     
-
+        scene.debugLayer.show();
 
 
     
@@ -319,5 +366,4 @@ async function loadCSVData() {
     }
 }
 initializeScene();
-
 
