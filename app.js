@@ -13,7 +13,7 @@ try {
     const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 100, height: 300 }, scene);
     const groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
     groundMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
-    groundMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+    //groundMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
     groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     ground.material = groundMaterial;
     ground.position = new BABYLON.Vector3(5, 0.5, 90);
@@ -61,7 +61,7 @@ try {
         //wallMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
         wallMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
         const wallThickness = 0.5;
-        const wallHeight = 10;
+        const wallHeight = 30;
 
         const createWall = (name, width, height, depth, position,wallMaterial) => {
             const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
@@ -77,21 +77,35 @@ try {
         const wall4 = createWall("wall4", wallThickness, wallHeight, 300, new BABYLON.Vector3(-45, wallHeight / 2, 90),wallMaterial);
         const roof = createWall("roof", 100, wallThickness, 300, new BABYLON.Vector3(5, wallHeight + wallThickness / 2, 90), wallMaterial);
         // Add 4 point lights at the center of each wall and 1 at the center of the roof
-        const lightIntensity = 0.8;
+        const lightIntensity = 1.0;
         const lightPositions = [
             new BABYLON.Vector3(5, wallHeight / 2, -60), // Center of front wall
             new BABYLON.Vector3(5, wallHeight / 2, 240), // Center of back wall
             new BABYLON.Vector3(-45, wallHeight / 2, 90), // Center of left wall
             new BABYLON.Vector3(55, wallHeight / 2, 90), // Center of right wall
-            new BABYLON.Vector3(5, wallHeight + 1, 90) // Center of roof
         ];
+        const lightDirections = [
+            new BABYLON.Vector3(0, 0, 1), // Direction for front wall light
+            new BABYLON.Vector3(0, 0, -1), // Direction for back wall light
+            new BABYLON.Vector3(1, 0, 0), // Direction for left wall light
+            new BABYLON.Vector3(-1, 0, 0), // Direction for right wall light
+        ];
+
+        const groundLight = new BABYLON.DirectionalLight("groundLight", new BABYLON.Vector3(0, -1, 0), scene);
+        groundLight.position = new BABYLON.Vector3(5, 10, 90);
+        groundLight.intensity = lightIntensity;
+
+        const roofLight = new BABYLON.DirectionalLight("roofLight", new BABYLON.Vector3(0, 1, 0), scene);
+        roofLight.position = new BABYLON.Vector3(5, wallHeight + wallThickness, 90);
+        roofLight.intensity = lightIntensity;
 
         lightPositions.forEach((position, index) => {
             const light = new BABYLON.PointLight(`pointLight${index + 1}`, position, scene);
             light.intensity = lightIntensity;
+            light.direction = lightDirections[index];
         });
 
-   
+
         const df = await loadCSVData();
         if (!df) {
             console.error('Failed to load Dataset.csv');
@@ -175,8 +189,8 @@ try {
             LineSystem.parent = parentNode;
             ribbon.parent = parentNode;
 
-            parentNode.scaling = new BABYLON.Vector3(0.1, 0.1, 0.1);
-            parentNode.position = new BABYLON.Vector3(5, 0.5, 90);
+            parentNode.scaling = new BABYLON.Vector3(0.8, 0.8, 0.8);
+            parentNode.position = new BABYLON.Vector3(5, 0.5, 13.57);
             groupMeshes[group] = { parentNode, LineSystem, ribbon };
         }
 
