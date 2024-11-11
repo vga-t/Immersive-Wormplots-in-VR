@@ -112,7 +112,7 @@ try {
             return;
         }
         
-
+        
         const wormName = "city_name";
         const TimeAttribute = "time_int";
         const Groups = df[wormName].unique().values;
@@ -250,19 +250,19 @@ try {
         let isPanelVisible = false;
         //updatePanelPosition();
 
-
-
         xrHelper.input.onControllerAddedObservable.add((controller) => {
             controller.onMotionControllerInitObservable.add((motionController) => {
-                const xr_ids = motionController.getComponentIds();
-                let triggerComponent = motionController.getComponent(xr_ids[0]);
-                let squeezeComponent = motionController.getComponent(xr_ids[1]);
+                const triggerComponent = motionController.getComponent('xr-standard-trigger');
+                const squeezeComponent = motionController.getComponent('xr-standard-squeeze');
+                const menuComponent = motionController.getComponent('x-button');
 
                 if (motionController.handness === 'left') {
                     leftController = controller;
-                    squeezeComponent.onButtonStateChangedObservable.add(() => {
-                        if (squeezeComponent.changes.pressed) {
-                            if (squeezeComponent.pressed) {
+
+                    // Menu button toggle
+                    if (menuComponent) {
+                        menuComponent.onButtonStateChangedObservable.add(() => {
+                            if (menuComponent.pressed) {
                                 isPanelVisible = !isPanelVisible;
                                 if (isPanelVisible) {
                                     updatePanelPosition();
@@ -273,32 +273,44 @@ try {
                                     button.isPickable = isPanelVisible;
                                 });
                             }
+                        });
+                    }
+
+                    // Scaling using left squeeze and right trigger
+                    squeezeComponent.onButtonStateChangedObservable.add(() => {
+                        if (squeezeComponent.changes.pressed) {
+                            if (squeezeComponent.pressed && leftController && rightController && pickedMesh) {
+                                startScaling();
+                            } else {
+                                stopScaling();
+                            }
                         }
                     });
-                } else if (motionController.handness === 'right') {
+                } 
+                else if (motionController.handness === 'right') {
                     rightController = controller;
+
+                    // Move worm plots using either controller's trigger
                     triggerComponent.onButtonStateChangedObservable.add(() => {
                         if (triggerComponent.changes.pressed) {
                             if (triggerComponent.pressed) {
-                     
-                                    let mesh = scene.meshUnderPointer;
-                                    if (xrHelper.pointerSelection.getMeshUnderPointer) {
-                                        mesh = xrHelper.pointerSelection.getMeshUnderPointer(controller.uniqueId);
-                                    }
-                                    if (mesh === ground) {
-                                        return;
-                                    }
-                                    const group = Object.keys(groupMeshes).find(group =>
-                                        groupMeshes[group].parentNode === mesh ||
-                                        groupMeshes[group].LineSystem === mesh ||
-                                        groupMeshes[group].ribbon === mesh
-                                    );
-                                    if (group) {
-                                        pickedMesh = groupMeshes[group].parentNode;
-                                        originalParent = pickedMesh.parent;
-                                        pickedMesh.setParent(motionController.rootMesh);
-                                    }
-                                
+                                let mesh = scene.meshUnderPointer;
+                                if (xrHelper.pointerSelection.getMeshUnderPointer) {
+                                    mesh = xrHelper.pointerSelection.getMeshUnderPointer(controller.uniqueId);
+                                }
+                                if (mesh === ground) {
+                                    return;
+                                }
+                                const group = Object.keys(groupMeshes).find(group => 
+                                    groupMeshes[group].parentNode === mesh || 
+                                    groupMeshes[group].LineSystem === mesh || 
+                                    groupMeshes[group].ribbon === mesh
+                                );
+                                if (group) {
+                                    pickedMesh = groupMeshes[group].parentNode;
+                                    originalParent = pickedMesh.parent;
+                                    pickedMesh.setParent(motionController.rootMesh);
+                                }
                             } else {
                                 if (pickedMesh) {
                                     pickedMesh.setParent(originalParent);
@@ -308,21 +320,10 @@ try {
                         }
                     });
                 }
-
-                squeezeComponent.onButtonStateChangedObservable.add(() => {
-                    if (squeezeComponent.changes.pressed) {
-                        if (squeezeComponent.pressed) {
-                            if (leftController && rightController && pickedMesh) {
-                                startScaling();
-                            }
-                        } else {
-                            stopScaling();
-                        }
-                    }
-                });
             });
         });
 
+        // Existing scaling and other methods remain the same
         function startScaling() {
             if (leftController && rightController && pickedMesh) {
                 const leftPosition = leftController.grip.position;
@@ -350,6 +351,9 @@ try {
                 }
             }
         });
+
+
+
 
     
         scene.debugLayer.show();
