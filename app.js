@@ -3,7 +3,7 @@ async function initializeScene() {
 
 try {
     const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true);
+    const engine = new BABYLON.Engine(canvas, true,);
     const scene = new BABYLON.Scene(engine);
 
     var camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(-6.58, 2.72, -5.40), scene);
@@ -118,6 +118,9 @@ try {
         const Groups = df[wormName].unique().values;
         const Attribute1 = "tmin";
         const Attribute2 = "tmax";
+        const info = "time";
+        const uniqueTime = df[info].unique().values;
+        console.log(`Number of unique time values: ${uniqueTime.length}`);
 
         let allBoxPlotValues = [];
 
@@ -174,6 +177,7 @@ try {
                 );
             }
 
+            
             let allLines = [...diamondLines, ...whiskerLines];
             let LineSystem = BABYLON.MeshBuilder.CreateLineSystem(`lines_${group}`, { lines: allLines }, scene);
             LineSystem.color = color;
@@ -193,6 +197,7 @@ try {
             parentNode.position = new BABYLON.Vector3(5, 0.5, 13.57);
             groupMeshes[group] = { parentNode, LineSystem, ribbon };
         }
+        
 
         function getRandomColor() {
             return new BABYLON.Color3(
@@ -356,13 +361,15 @@ try {
 
 
     
-        scene.debugLayer.show();
+    //scene.debugLayer.show();
 
 
     
 
     engine.runRenderLoop(function() {
         scene.render();
+        var fps = engine.getFps().toFixed();
+        document.getElementById('fpsCounter').innerText = fps + " FPS";
     });
 
     window.addEventListener("resize", function() {
