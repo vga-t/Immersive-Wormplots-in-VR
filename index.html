@@ -24,12 +24,34 @@
             height: 100%;
             touch-action: none; /* Prevent default touch behaviors */
         }
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px; /* Move to the top right corner */
+            background-color: rgba(0,0,0,0.6);
+            padding: 8px;
+            border-radius: 4px;
+            z-index: 999;
+            color: white;
+        }
+        select {
+            margin: 4px;
+            border-radius: 3px;
+            padding: 2px 6px;
+        }
     </style>
 </head>
 <body>
     
     <canvas id="renderCanvas" style="width: 100%; height: 100vh;"></canvas>
-
+    <div id="controls">
+        <select id="datasetSelect">
+            <option value="Weather">Weather Data</option>
+            <option value="Toxicology">Toxicology Data</option>
+        </select>
+        <select id="attribute1Select"></select>
+        <select id="attribute2Select"></select>
+    </div>
     <script src = "app.js"></script>
 </body>
 </html>

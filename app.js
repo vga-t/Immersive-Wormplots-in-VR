@@ -1,7 +1,77 @@
+// Dataset configurations
+const datasetConfig = {
+    Weather: {
+        file: './Weather.csv',
+        wormName: 'city_name',
+        timeAttribute: 'time_int',
+        attributes: ['tavg','tmin','tmax','prcp','snow','wdir','wspd','wpgt','pres','tsun'],
+    },
+    Toxicology: {
+        file: './Toxicology.csv',
+        wormName: 'Group',
+        timeAttribute: 'Time',
+        attributes: ['Daphnia_Large','Daphnia_Small','Scenedesmus','Ankistrodesmus','pH'],
+    }
+};
+
+let currentDataset = 'Weather';
+let attribute1 = '';
+let attribute2 = '';
+
+// Create or update UI controls
+function setupUI() {
+    const datasetSelect = document.getElementById('datasetSelect');
+    const attr1Select = document.getElementById('attribute1Select');
+    const attr2Select = document.getElementById('attribute2Select');
+    datasetSelect.value = currentDataset;
+
+    function populateAttributes() {
+        const attrs = datasetConfig[currentDataset].attributes;
+        attr1Select.innerHTML = '';
+        attr2Select.innerHTML = '';
+        attrs.forEach(a => {
+            attr1Select.add(new Option(a, a));
+            attr2Select.add(new Option(a, a));
+        });
+        if (!attribute1 || !attrs.includes(attribute1)) attribute1 = attrs[0];
+        if (!attribute2 || !attrs.includes(attribute2)) attribute2 = attrs[1];
+        attr1Select.value = attribute1;
+        attr2Select.value = attribute2;
+    }
+
+    datasetSelect.onchange = () => {
+        currentDataset = datasetSelect.value;
+        populateAttributes();
+        initializeScene();
+    };
+    attr1Select.onchange = () => {
+        attribute1 = attr1Select.value;
+        initializeScene();
+    };
+    attr2Select.onchange = () => {
+        attribute2 = attr2Select.value;
+        initializeScene();
+    };
+
+    populateAttributes();
+}
+
+// Modify loadCSVData to load active dataset
+async function loadCSVData() {
+    try {
+        const cfg = datasetConfig[currentDataset];
+        const df = await dfd.readCSV(cfg.file);
+        return df;
+    } catch (error) {
+        console.error('Error loading CSV:', error);
+        return null;
+    }
+}
 
 async function initializeScene() {
 
 try {
+    setupUI(); // Ensure we have up-to-date UI selections
     const canvas = document.getElementById("renderCanvas");
     const engine = new BABYLON.Engine(canvas, true,);
     const scene = new BABYLON.Scene(engine);
@@ -112,15 +182,16 @@ try {
             return;
         }
         
-        
-        const wormName = "city_name";
-        const TimeAttribute = "time_int";
+        const cfg = datasetConfig[currentDataset];
+        const wormName = cfg.wormName;
+        const TimeAttribute = cfg.timeAttribute;
         const Groups = df[wormName].unique().values;
-        const Attribute1 = "tmin";
-        const Attribute2 = "tmax";
-        const info = "time";
-        const uniqueTime = df[info].unique().values;
-        console.log(`Number of unique time values: ${uniqueTime.length}`);
+        // Use selected attributes; handle if they're the same
+        const Attribute1 = attribute1;
+        const Attribute2 = attribute2;
+        // const info = "time";
+        // const uniqueTime = df[info].unique().values;
+        //console.log(`Number of unique time values: ${uniqueTime.length}`);
 
         let allBoxPlotValues = [];
 
@@ -143,16 +214,29 @@ try {
                     max[i] = math.max(intermediate[i].filter(value => value <= (Q3[i] + 1.5 * IQR)));
                 }
 
-                boxPLotvalues.push([
-                    new BABYLON.Vector3(median[0], Q1[1], timeStamp),
-                    new BABYLON.Vector3(Q1[0], median[1], timeStamp),
-                    new BABYLON.Vector3(median[0], Q3[1], timeStamp),
-                    new BABYLON.Vector3(Q3[0], median[1], timeStamp),
-                    new BABYLON.Vector3(median[0], min[1], timeStamp),
-                    new BABYLON.Vector3(min[0], median[1], timeStamp),
-                    new BABYLON.Vector3(median[0], max[1], timeStamp),
-                    new BABYLON.Vector3(max[0], median[1], timeStamp)
-                ]);
+                if (Attribute1 === Attribute2) {
+                    boxPLotvalues.push([
+                        new BABYLON.Vector3(median[0], Q1[0], timeStamp),
+                        new BABYLON.Vector3(Q1[0], median[0], timeStamp),
+                        new BABYLON.Vector3(median[0], Q3[0], timeStamp),
+                        new BABYLON.Vector3(Q3[0], median[0], timeStamp),
+                        new BABYLON.Vector3(median[0], min[0], timeStamp),
+                        new BABYLON.Vector3(min[0], median[0], timeStamp),
+                        new BABYLON.Vector3(median[0], max[0], timeStamp),
+                        new BABYLON.Vector3(max[0], median[0], timeStamp)
+                    ]);
+                } else {
+                    boxPLotvalues.push([
+                        new BABYLON.Vector3(median[0], Q1[1], timeStamp),
+                        new BABYLON.Vector3(Q1[0], median[1], timeStamp),
+                        new BABYLON.Vector3(median[0], Q3[1], timeStamp),
+                        new BABYLON.Vector3(Q3[0], median[1], timeStamp),
+                        new BABYLON.Vector3(median[0], min[1], timeStamp),
+                        new BABYLON.Vector3(min[0], median[1], timeStamp),
+                        new BABYLON.Vector3(median[0], max[1], timeStamp),
+                        new BABYLON.Vector3(max[0], median[1], timeStamp)
+                    ]);
+                }
             }
 
             allBoxPlotValues.push({ group: Group, values: boxPLotvalues });
@@ -356,10 +440,6 @@ try {
                 }
             }
         });
-
-
-
-
     
     //scene.debugLayer.show();
 
@@ -380,15 +460,7 @@ try {
 }
 
 }
-async function loadCSVData() {
-    try {
 
-        const df = await dfd.readCSV("./Dataset.csv");
-        return df;
-    } catch (error) {
-        console.error('Error loading CSV:', error);
-        return null;
-    }
-}
-initializeScene();
+// Ensure initializeScene is called after DOM is fully loaded
+document.addEventListener('DOMContentLoaded', initializeScene);
 
