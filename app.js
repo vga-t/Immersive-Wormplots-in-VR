@@ -452,8 +452,7 @@ try {
 
         let isFlying = false; // Tracks if flying mode is active
         let flightSpeed = 0.1; // Base flight speed
-        let maxFlightSpeed = 1.0; // Maximum flight speed
-        let minFlightSpeed = 0.05; // Minimum flight speed
+
 
         xrHelper.input.onControllerAddedObservable.add((controller) => {
             controller.onMotionControllerInitObservable.add((motionController) => {
@@ -469,18 +468,6 @@ try {
                     });
                 }
 
-                // Handle joystick for flying speed and direction
-                if (joystickComponent) {
-                    joystickComponent.onAxisValueChangedObservable.add((axes) => {
-                        if (isFlying) {
-                            flightSpeed = BABYLON.Scalar.Clamp(
-                                flightSpeed + axes.y * 0.01,
-                                minFlightSpeed,
-                                maxFlightSpeed
-                            );
-                        }
-                    });
-                }
             });
         });
 
