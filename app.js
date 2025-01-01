@@ -4,22 +4,22 @@ const datasetConfig = {
         file: './Weather.csv',
         wormName: 'city_name',
         timeAttribute: 'time_int',
-        attributes: ['tavg','tmin','tmax','prcp','snow','wdir','wspd','wpgt','pres','tsun'],
+        attributes: ['tavg', 'tmin', 'tmax', 'prcp', 'snow', 'wdir', 'wspd', 'wpgt', 'pres', 'tsun'],
     },
     Toxicology: {
         file: './Toxicology.csv',
         wormName: 'Group',
         timeAttribute: 'Time',
-        attributes: ['Daphnia_Large','Daphnia_Small','Scenedesmus','Ankistrodesmus','pH'],
+        attributes: ['Daphnia_Large', 'Daphnia_Small', 'Scenedesmus', 'Ankistrodesmus', 'pH'],
     }
 };
 
 let currentDataset = 'Weather';
 let attribute1 = '';
 let attribute2 = '';
-
 let debounceTimeout;
 
+// Debounce function to delay scene initialization
 function debounceInitializeScene() {
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(() => {
@@ -65,7 +65,7 @@ function setupUI() {
     populateAttributes();
 }
 
-// Modify loadCSVData to load active dataset
+// Load CSV data for the active dataset
 async function loadCSVData() {
     try {
         const cfg = datasetConfig[currentDataset];
@@ -77,85 +77,79 @@ async function loadCSVData() {
     }
 }
 
+// Initialize the 3D scene
 async function initializeScene() {
+    try {
+        setupUI(); // Ensure we have up-to-date UI selections
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true, { xrCompatible: true }); // Set xrCompatible to true
+        const scene = new BABYLON.Scene(engine);
 
-try {
-    setupUI(); // Ensure we have up-to-date UI selections
-    const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true, { xrCompatible: true }); // Set xrCompatible to true
-    const scene = new BABYLON.Scene(engine);
+        // Set up the camera
+        var camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(-6.58, 2.72, -5.40), scene);
+        camera.setTarget(new BABYLON.Vector3(24.19, 2.92, 47.08));
+        camera.attachControl(canvas, true);
 
-    var camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(-6.58, 2.72, -5.40), scene);
-    camera.setTarget(new BABYLON.Vector3(24.19, 2.92, 47.08));
-    camera.attachControl(canvas, true);
+        // Create the ground
+        const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 100, height: 300 }, scene);
+        const groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
+        groundMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+        groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+        ground.material = groundMaterial;
+        ground.position = new BABYLON.Vector3(5, 0.5, 90);
 
-    const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 100, height: 300 }, scene);
-    const groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
-    groundMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
-    //groundMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
-    groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
-    ground.material = groundMaterial;
-    ground.position = new BABYLON.Vector3(5, 0.5, 90);
+        // Create XR experience
+        const xrHelper = await scene.createDefaultXRExperienceAsync({
+            floorMeshes: [ground],
+            inputOptions: {
+                disableDefaultControllerMesh: true,
+            }
+        });
 
-    //const light = new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(5, 0, -50), scene);
-    
-    // light.position = new BABYLON.Vector3(6.465342998504639, 4.947967052459717, 1.6477842330932617);
-    // light.direction = new BABYLON.Vector3(-0.0005480896732761323, 0.2887493048221811, 0.9574045845735318);
+        let leftController, rightController;
+        let initialDistance = null;
+        let initialScale = null;
+        let isScaling = false;
+        let pickedMesh = null;
+        let originalParent = null;
+        const groupMeshes = {};
 
+        // Create the 3D UI manager
+        const manager = new BABYLON.GUI.GUI3DManager(scene);
 
-    const xrHelper = await scene.createDefaultXRExperienceAsync({
-        floorMeshes: [ground],
-        inputOptions: {
-            controllerType: "oculusQuest"
-        }
-    });
+        // Create plane panel
+        const panel = new BABYLON.GUI.PlanePanel();
+        panel.margin = 0.02;
+        manager.addControl(panel);
 
-    let leftController, rightController;
-    let initialDistance = null;
-    let initialScale = null;
-    let isScaling = false;
-    let pickedMesh = null;
-    let originalParent = null;
-    const groupMeshes = {};
+        // Set panel dimensions
+        panel.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
 
-    // Create the 3D UI manager
-    const manager = new BABYLON.GUI.GUI3DManager(scene);
-
-    // Create plane panel
-    const panel = new BABYLON.GUI.PlanePanel();
-    panel.margin = 0.02;
-    manager.addControl(panel);
-
-    // Set panel dimensions
-    panel.scaling = new BABYLON.Vector3(0.3, 0.3, 0.3);
-
-    // Create an anchor for the panel
-    const anchor = new BABYLON.TransformNode("panelAnchor");
-    panel.linkToTransformNode(anchor);
-
+        // Create an anchor for the panel
+        const anchor = new BABYLON.TransformNode("panelAnchor");
+        panel.linkToTransformNode(anchor);
 
         // Create walls around the ground
         const wallMaterial = new BABYLON.StandardMaterial("wallMaterial", scene);
         wallMaterial.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
-        //wallMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
         wallMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
         const wallThickness = 0.5;
         const wallHeight = 30;
 
-        const createWall = (name, width, height, depth, position,wallMaterial) => {
+        const createWall = (name, width, height, depth, position, wallMaterial) => {
             const wall = BABYLON.MeshBuilder.CreateBox(name, { width, height, depth }, scene);
             wall.material = wallMaterial;
             wall.position = position;
-            
             return wall;
         };
 
-        const wall1 = createWall("wall1", 100, wallHeight, wallThickness, new BABYLON.Vector3(5, wallHeight / 2, 240),wallMaterial);
-        const wall2 = createWall("wall2", 100, wallHeight, wallThickness, new BABYLON.Vector3(5, wallHeight / 2, -60),wallMaterial);
-        const wall3 = createWall("wall3", wallThickness, wallHeight, 300, new BABYLON.Vector3(55, wallHeight / 2, 90),wallMaterial);
-        const wall4 = createWall("wall4", wallThickness, wallHeight, 300, new BABYLON.Vector3(-45, wallHeight / 2, 90),wallMaterial);
+        const wall1 = createWall("wall1", 100, wallHeight, wallThickness, new BABYLON.Vector3(5, wallHeight / 2, 240), wallMaterial);
+        const wall2 = createWall("wall2", 100, wallHeight, wallThickness, new BABYLON.Vector3(5, wallHeight / 2, -60), wallMaterial);
+        const wall3 = createWall("wall3", wallThickness, wallHeight, 300, new BABYLON.Vector3(55, wallHeight / 2, 90), wallMaterial);
+        const wall4 = createWall("wall4", wallThickness, wallHeight, 300, new BABYLON.Vector3(-45, wallHeight / 2, 90), wallMaterial);
         const roof = createWall("roof", 100, wallThickness, 300, new BABYLON.Vector3(5, wallHeight + wallThickness / 2, 90), wallMaterial);
-        // Add 4 point lights at the center of each wall and 1 at the center of the roof
+
+        // Add lights
         const lightIntensity = 1.0;
         const lightPositions = [
             new BABYLON.Vector3(5, wallHeight / 2, -60), // Center of front wall
@@ -184,26 +178,23 @@ try {
             light.direction = lightDirections[index];
         });
 
-
+        // Load CSV data
         const df = await loadCSVData();
         if (!df) {
             console.error('Failed to load Dataset.csv');
             return;
         }
-        
+
         const cfg = datasetConfig[currentDataset];
         const wormName = cfg.wormName;
         const TimeAttribute = cfg.timeAttribute;
         const Groups = df[wormName].unique().values;
-        // Use selected attributes; handle if they're the same
         const Attribute1 = attribute1;
         const Attribute2 = attribute2;
-        // const info = "time";
-        // const uniqueTime = df[info].unique().values;
-        //console.log(`Number of unique time values: ${uniqueTime.length}`);
 
         let allBoxPlotValues = [];
 
+        // Process data for each group
         for (let Group of Groups) {
             let filteredDf = df.loc({ rows: df[wormName].eq(Group), columns: [TimeAttribute, Attribute1, Attribute2] });
             let groupedDf = filteredDf.groupby([TimeAttribute]);
@@ -251,6 +242,7 @@ try {
             allBoxPlotValues.push({ group: Group, values: boxPLotvalues });
         }
 
+        // Connect points to create box plots
         function connectPoints(points, scene, color, group) {
             let diamondLines = [];
             let whiskerLines = [];
@@ -270,7 +262,6 @@ try {
                 );
             }
 
-            
             let allLines = [...diamondLines, ...whiskerLines];
             let LineSystem = BABYLON.MeshBuilder.CreateLineSystem(`lines_${group}`, { lines: allLines }, scene);
             LineSystem.color = color;
@@ -278,7 +269,6 @@ try {
             var ribbon = BABYLON.Mesh.CreateRibbon(`ribbon_${group}`, paths, false, false, 0, scene);
             const ribbonMaterial = new BABYLON.StandardMaterial(`ribbonMaterial_${group}`, scene);
             ribbonMaterial.diffuseColor = color;
-            //ribbonMaterial.emissiveColor = color;
             ribbonMaterial.backFaceCulling = false;
             ribbon.material = ribbonMaterial;
 
@@ -290,8 +280,8 @@ try {
             parentNode.position = new BABYLON.Vector3(5, 0.5, 13.57);
             groupMeshes[group] = { parentNode, LineSystem, ribbon };
         }
-        
 
+        // Generate random colors for groups
         function getRandomColor() {
             return new BABYLON.Color3(
                 Math.random(),
@@ -309,6 +299,7 @@ try {
             connectPoints(groupData.values, scene, colors[groupData.group], groupData.group);
         });
 
+        // Toggle visibility of group meshes
         function toggleVisibility(group) {
             const meshes = groupMeshes[group];
             if (meshes) {
@@ -346,13 +337,25 @@ try {
 
         // Toggle panel visibility and interactivity
         let isPanelVisible = false;
-        //updatePanelPosition();
 
         xrHelper.input.onControllerAddedObservable.add((controller) => {
             controller.onMotionControllerInitObservable.add((motionController) => {
                 const triggerComponent = motionController.getComponent('xr-standard-trigger');
                 const squeezeComponent = motionController.getComponent('xr-standard-squeeze');
                 const menuComponent = motionController.getComponent('x-button');
+
+                // Load the appropriate controller model based on profileId
+                const profileId = motionController.profileId;
+                BABYLON.SceneLoader.ImportMesh("", "https://controllers.babylonjs.com/", `${profileId}.glb`, scene, (meshes) => {
+                    meshes.forEach(mesh => {
+                        mesh.parent = motionController.rootMesh;
+
+                        // Make the mesh emissive
+                        const emissiveMaterial = new BABYLON.StandardMaterial("emissiveMaterial", scene);
+                        emissiveMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1); // Set emissive color to white
+                        mesh.material = emissiveMaterial;
+                    });
+                });
 
                 if (motionController.handness === 'left') {
                     leftController = controller;
@@ -384,8 +387,7 @@ try {
                             }
                         }
                     });
-                } 
-                else if (motionController.handness === 'right') {
+                } else if (motionController.handness === 'right') {
                     rightController = controller;
 
                     // Move worm plots using either controller's trigger
@@ -399,9 +401,9 @@ try {
                                 if (mesh === ground) {
                                     return;
                                 }
-                                const group = Object.keys(groupMeshes).find(group => 
-                                    groupMeshes[group].parentNode === mesh || 
-                                    groupMeshes[group].LineSystem === mesh || 
+                                const group = Object.keys(groupMeshes).find(group =>
+                                    groupMeshes[group].parentNode === mesh ||
+                                    groupMeshes[group].LineSystem === mesh ||
                                     groupMeshes[group].ribbon === mesh
                                 );
                                 if (group) {
@@ -453,12 +455,10 @@ try {
         let isFlying = false; // Tracks if flying mode is active
         let flightSpeed = 0.1; // Base flight speed
 
-
         xrHelper.input.onControllerAddedObservable.add((controller) => {
             controller.onMotionControllerInitObservable.add((motionController) => {
                 const joystickComponent = motionController.getComponent('xr-standard-thumbstick');
 
-                
                 const toggleButton = motionController.getComponent('y-button');
                 if (toggleButton) {
                     toggleButton.onButtonStateChangedObservable.add(() => {
@@ -467,7 +467,6 @@ try {
                         }
                     });
                 }
-
             });
         });
 
@@ -479,25 +478,19 @@ try {
                 xrCamera.position.addInPlace(forward);
             }
         });
-    
-    //scene.debugLayer.show();
 
+        engine.runRenderLoop(function() {
+            scene.render();
+            var fps = engine.getFps().toFixed();
+            document.getElementById('fpsCounter').innerText = fps + " FPS";
+        });
 
-    
-
-    engine.runRenderLoop(function() {
-        scene.render();
-        var fps = engine.getFps().toFixed();
-        document.getElementById('fpsCounter').innerText = fps + " FPS";
-    });
-
-    window.addEventListener("resize", function() {
-        engine.resize();
-    });
-}catch (error) {
-    console.error('Error initializing scene:', error);
-}
-
+        window.addEventListener("resize", function() {
+            engine.resize();
+        });
+    } catch (error) {
+        console.error('Error initializing scene:', error);
+    }
 }
 
 // Ensure initializeScene is called after DOM is fully loaded
