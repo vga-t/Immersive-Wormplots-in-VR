@@ -82,7 +82,7 @@ async function initializeScene() {
 try {
     setupUI(); // Ensure we have up-to-date UI selections
     const canvas = document.getElementById("renderCanvas");
-    const engine = new BABYLON.Engine(canvas, true,);
+    const engine = new BABYLON.Engine(canvas, true, { xrCompatible: true }); // Set xrCompatible to true
     const scene = new BABYLON.Scene(engine);
 
     var camera = new BABYLON.UniversalCamera("camera", new BABYLON.Vector3(-6.58, 2.72, -5.40), scene);
