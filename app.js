@@ -449,6 +449,49 @@ try {
                 }
             }
         });
+
+        let isFlying = false; // Tracks if flying mode is active
+        let flightSpeed = 0.1; // Base flight speed
+        let maxFlightSpeed = 1.0; // Maximum flight speed
+        let minFlightSpeed = 0.05; // Minimum flight speed
+
+        xrHelper.input.onControllerAddedObservable.add((controller) => {
+            controller.onMotionControllerInitObservable.add((motionController) => {
+                const joystickComponent = motionController.getComponent('xr-standard-thumbstick');
+
+                
+                const toggleButton = motionController.getComponent('y-button');
+                if (toggleButton) {
+                    toggleButton.onButtonStateChangedObservable.add(() => {
+                        if (toggleButton.pressed) {
+                            isFlying = !isFlying;
+                        }
+                    });
+                }
+
+                // Handle joystick for flying speed and direction
+                if (joystickComponent) {
+                    joystickComponent.onAxisValueChangedObservable.add((axes) => {
+                        if (isFlying) {
+                            flightSpeed = BABYLON.Scalar.Clamp(
+                                flightSpeed + axes.y * 0.01,
+                                minFlightSpeed,
+                                maxFlightSpeed
+                            );
+                        }
+                    });
+                }
+            });
+        });
+
+        // Update camera position during flight
+        scene.onBeforeRenderObservable.add(() => {
+            if (isFlying) {
+                const xrCamera = xrHelper.baseExperience.camera;
+                const forward = xrCamera.getDirection(BABYLON.Vector3.Forward()).scale(flightSpeed);
+                xrCamera.position.addInPlace(forward);
+            }
+        });
     
     //scene.debugLayer.show();
 
