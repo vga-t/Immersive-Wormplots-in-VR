@@ -18,6 +18,15 @@ let currentDataset = 'Weather';
 let attribute1 = '';
 let attribute2 = '';
 
+let debounceTimeout;
+
+function debounceInitializeScene() {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = setTimeout(() => {
+        initializeScene();
+    }, 300); // Adjust the delay as needed
+}
+
 // Create or update UI controls
 function setupUI() {
     const datasetSelect = document.getElementById('datasetSelect');
@@ -42,15 +51,15 @@ function setupUI() {
     datasetSelect.onchange = () => {
         currentDataset = datasetSelect.value;
         populateAttributes();
-        initializeScene();
+        debounceInitializeScene();
     };
     attr1Select.onchange = () => {
         attribute1 = attr1Select.value;
-        initializeScene();
+        debounceInitializeScene();
     };
     attr2Select.onchange = () => {
         attribute2 = attr2Select.value;
-        initializeScene();
+        debounceInitializeScene();
     };
 
     populateAttributes();
@@ -463,4 +472,3 @@ try {
 
 // Ensure initializeScene is called after DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initializeScene);
-
