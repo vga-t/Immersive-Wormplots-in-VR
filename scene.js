@@ -1,86 +1,11 @@
-// Dataset configurations
-const datasetConfig = {
-    Weather: {
-        file: './Weather.csv',
-        wormName: 'city_name',
-        timeAttribute: 'time_int',
-        attributes: ['tavg', 'tmin', 'tmax', 'prcp', 'snow', 'wdir', 'wspd', 'wpgt', 'pres', 'tsun'],
-    },
-    Toxicology: {
-        file: './Toxicology.csv',
-        wormName: 'Group',
-        timeAttribute: 'Time',
-        attributes: ['Daphnia_Large', 'Daphnia_Small', 'Scenedesmus', 'Ankistrodesmus', 'pH'],
-    }
-};
+import { loadCSVData } from './dataLoader.js';
+import { currentDataset, attribute1, attribute2, setupUI } from './ui.js'; // Add setupUI import
+import { datasetConfig } from './config.js';
+import { setupControllers } from './controllers.js';
 
-let currentDataset = 'Weather';
-let attribute1 = '';
-let attribute2 = '';
-let debounceTimeout;
-
-// Debounce function to delay scene initialization
-function debounceInitializeScene() {
-    clearTimeout(debounceTimeout);
-    debounceTimeout = setTimeout(() => {
-        initializeScene();
-    }, 300); // Adjust the delay as needed
-}
-
-// Create or update UI controls
-function setupUI() {
-    const datasetSelect = document.getElementById('datasetSelect');
-    const attr1Select = document.getElementById('attribute1Select');
-    const attr2Select = document.getElementById('attribute2Select');
-    datasetSelect.value = currentDataset;
-
-    function populateAttributes() {
-        const attrs = datasetConfig[currentDataset].attributes;
-        attr1Select.innerHTML = '';
-        attr2Select.innerHTML = '';
-        attrs.forEach(a => {
-            attr1Select.add(new Option(a, a));
-            attr2Select.add(new Option(a, a));
-        });
-        if (!attribute1 || !attrs.includes(attribute1)) attribute1 = attrs[0];
-        if (!attribute2 || !attrs.includes(attribute2)) attribute2 = attrs[1];
-        attr1Select.value = attribute1;
-        attr2Select.value = attribute2;
-    }
-
-    datasetSelect.onchange = () => {
-        currentDataset = datasetSelect.value;
-        populateAttributes();
-        debounceInitializeScene();
-    };
-    attr1Select.onchange = () => {
-        attribute1 = attr1Select.value;
-        debounceInitializeScene();
-    };
-    attr2Select.onchange = () => {
-        attribute2 = attr2Select.value;
-        debounceInitializeScene();
-    };
-
-    populateAttributes();
-}
-
-// Load CSV data for the active dataset
-async function loadCSVData() {
+export async function initializeScene() {
     try {
-        const cfg = datasetConfig[currentDataset];
-        const df = await dfd.readCSV(cfg.file);
-        return df;
-    } catch (error) {
-        console.error('Error loading CSV:', error);
-        return null;
-    }
-}
-
-// Initialize the 3D scene
-async function initializeScene() {
-    try {
-        setupUI(); // Ensure we have up-to-date UI selections
+        setupUI(initializeScene); // Ensure we have up-to-date UI selections
         const canvas = document.getElementById("renderCanvas");
         const engine = new BABYLON.Engine(canvas, true, { xrCompatible: true }); // Set xrCompatible to true
         const scene = new BABYLON.Scene(engine);
@@ -179,7 +104,7 @@ async function initializeScene() {
         });
 
         // Load CSV data
-        const df = await loadCSVData();
+        const df = await loadCSVData(currentDataset);
         if (!df) {
             console.error('Failed to load Dataset.csv');
             return;
@@ -492,6 +417,3 @@ async function initializeScene() {
         console.error('Error initializing scene:', error);
     }
 }
-
-// Ensure initializeScene is called after DOM is fully loaded
-document.addEventListener('DOMContentLoaded', initializeScene);
