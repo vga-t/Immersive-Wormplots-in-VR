@@ -2,7 +2,7 @@ import { loadCSVData } from './dataLoader.js';
 import { currentDataset, attribute1, attribute2, setupUI } from './ui.js'; // Add setupUI import
 import { datasetConfig } from './config.js';
 import { setupControllers } from './controllers.js';
-import {groupMeshes} from './helpers.js'; 
+import { groupMeshes, getRandomColor, toggleVisibility } from './helpers.js'; 
 
 
 
@@ -50,6 +50,8 @@ export async function initializeScene() {
         const anchor = new BABYLON.TransformNode("panelAnchor");
         panel.linkToTransformNode(anchor);
 
+
+        
         // Call setupControllers to handle all controller logic
         await setupControllers(scene, xrHelper, panel, anchor, ground);
 
@@ -205,14 +207,7 @@ export async function initializeScene() {
             groupMeshes[group] = { parentNode, LineSystem, ribbon };
         }
 
-        // Generate random colors for groups
-        function getRandomColor() {
-            return new BABYLON.Color3(
-                Math.random(),
-                Math.random(),
-                Math.random()
-            );
-        }
+   
 
         const colors = {};
         Groups.forEach(group => {
@@ -223,14 +218,7 @@ export async function initializeScene() {
             connectPoints(groupData.values, scene, colors[groupData.group], groupData.group);
         });
 
-        // Toggle visibility of group meshes
-        function toggleVisibility(group) {
-            const meshes = groupMeshes[group];
-            if (meshes) {
-                meshes.LineSystem.isVisible = !meshes.LineSystem.isVisible;
-                meshes.ribbon.isVisible = !meshes.ribbon.isVisible;
-            }
-        }
+
 
         // Add buttons to the panel
         const addButton = function(group, color) {
@@ -242,9 +230,14 @@ export async function initializeScene() {
             const buttonMaterial = new BABYLON.StandardMaterial("buttonColor_" + group, scene);
             buttonMaterial.diffuseColor = color;
             button.mesh.material = buttonMaterial;
+               
+
+
             button.onPointerUpObservable.add(() => {
                 toggleVisibility(group);
             });
+
+          
         }
 
         Groups.forEach(group => {

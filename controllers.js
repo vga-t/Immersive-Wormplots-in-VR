@@ -1,4 +1,4 @@
-import { groupMeshes,toggleVisibility, getRandomColor } from './helpers.js';
+import { groupMeshes } from './helpers.js';
 
 export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     let leftController, rightController;
