@@ -70,7 +70,7 @@ function setupCamera(scene, canvas) {
 function setupGround(scene) {
     const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 100, height: 300 }, scene);
     const groundMaterial = new BABYLON.StandardMaterial("groundMaterial", scene);
-    groundMaterial.diffuseColor = new BABYLON.Color3(1, 1, 1);
+    groundMaterial.diffuseColor = new BABYLON.Color3(0.4, 0.4, 0.4);
     groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
     ground.material = groundMaterial;
     ground.position = new BABYLON.Vector3(5, 0.5, 90);
@@ -86,7 +86,7 @@ async function setupXR(scene, ground) {
 
 function setupWalls(scene) {
     const wallMaterial = new BABYLON.StandardMaterial("wallMaterial", scene);
-    wallMaterial.diffuseColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+    wallMaterial.diffuseColor = new BABYLON.Color3(0.5, 0.5, 0.5);
     wallMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
 
     const createWall = (name, width, height, depth, position) => {
