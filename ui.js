@@ -24,12 +24,19 @@ export function setupUI(initializeScene) {
         const attrs = datasetConfig[currentDataset].attributes;
         attr1Select.innerHTML = '';
         attr2Select.innerHTML = '';
+
         attrs.forEach(a => {
-            attr1Select.add(new Option(a, a));
-            attr2Select.add(new Option(a, a));
+            if (a !== attribute2) {
+                attr1Select.add(new Option(a, a));
+            }
+            if (a !== attribute1) {
+                attr2Select.add(new Option(a, a));
+            }
         });
+
         if (!attribute1 || !attrs.includes(attribute1)) attribute1 = attrs[0];
         if (!attribute2 || !attrs.includes(attribute2)) attribute2 = attrs[1];
+
         attr1Select.value = attribute1;
         attr2Select.value = attribute2;
     }
@@ -39,12 +46,16 @@ export function setupUI(initializeScene) {
         populateAttributes();
         debounceInitializeScene(initializeScene);
     };
+
     attr1Select.onchange = () => {
         attribute1 = attr1Select.value;
+        populateAttributes();
         debounceInitializeScene(initializeScene);
     };
+
     attr2Select.onchange = () => {
         attribute2 = attr2Select.value;
+        populateAttributes();
         debounceInitializeScene(initializeScene);
     };
 
