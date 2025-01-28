@@ -47,18 +47,7 @@ export function processData(df, currentDataset, attribute1, attribute2) {
                 max[i] = math.max(intermediate[i].filter(value => value <= (Q3[i] + 1.5 * IQR)));
             }
 
-            if (Attribute1 === Attribute2) {
-                boxPLotvalues.push([
-                    new BABYLON.Vector3(median[0], Q1[0], timeStamp),
-                    new BABYLON.Vector3(Q1[0], median[0], timeStamp),
-                    new BABYLON.Vector3(median[0], Q3[0], timeStamp),
-                    new BABYLON.Vector3(Q3[0], median[0], timeStamp),
-                    new BABYLON.Vector3(median[0], min[0], timeStamp),
-                    new BABYLON.Vector3(min[0], median[0], timeStamp),
-                    new BABYLON.Vector3(median[0], max[0], timeStamp),
-                    new BABYLON.Vector3(max[0], median[0], timeStamp)
-                ]);
-            } else {
+
                 boxPLotvalues.push([
                     new BABYLON.Vector3(median[0], Q1[1], timeStamp),
                     new BABYLON.Vector3(Q1[0], median[1], timeStamp),
@@ -69,7 +58,7 @@ export function processData(df, currentDataset, attribute1, attribute2) {
                     new BABYLON.Vector3(median[0], max[1], timeStamp),
                     new BABYLON.Vector3(max[0], median[1], timeStamp)
                 ]);
-            }
+            
         }
 
         allBoxPlotValues.push({ group: Group, values: boxPLotvalues });

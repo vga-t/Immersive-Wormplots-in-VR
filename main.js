@@ -26,7 +26,14 @@ export async function initializeScene() {
         const xrHelper = await setupXR(scene, ground);
         const { manager, panel, anchor } = setupUIManager(scene);
         const df = await loadCSVData(currentDataset);
-        const { Groups, allBoxPlotValues } = processData(df, currentDataset, attribute1, attribute2);
+
+        let Groups, allBoxPlotValues;
+        if (currentDataset === 'WeatherDetailed') {
+            // Placeholder for new data processing logic
+            ({ Groups, allBoxPlotValues } = processDetailedWeatherData(df, attribute1, attribute2));
+        } else {
+            ({ Groups, allBoxPlotValues } = processData(df, currentDataset, attribute1, attribute2));
+        }
 
         const colors = {};
         const datasetColors = datasetConfig[currentDataset].colors;
@@ -168,6 +175,11 @@ function renderVisualization(allBoxPlotValues, colors, scene) {
     allBoxPlotValues.forEach(groupData => {
         connectPoints(groupData.values, scene, colors[groupData.group], groupData.group);
     });
+}
+
+function processDetailedWeatherData(df, attribute1, attribute2) {
+    // Placeholder for detailed weather data processing logic
+    return { Groups: [], allBoxPlotValues: [] };
 }
 
 // Initialize the scene when the script is loaded
