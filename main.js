@@ -29,8 +29,9 @@ export async function initializeScene() {
         const { Groups, allBoxPlotValues } = processData(df, currentDataset, attribute1, attribute2);
 
         const colors = {};
-        Groups.forEach(group => {
-            colors[group] = getRandomColor();
+        const datasetColors = datasetConfig[currentDataset].colors;
+        Groups.forEach((group, index) => {
+            colors[group] = datasetColors[index % datasetColors.length];
         });
 
         renderVisualization(allBoxPlotValues, colors, scene);
@@ -150,6 +151,8 @@ function setupToggleButtons(Groups, colors, panel, scene) {
         button.text = group;
         const buttonMaterial = new BABYLON.StandardMaterial("buttonColor_" + group, scene);
         buttonMaterial.diffuseColor = color;
+        buttonMaterial.emissiveColor = new BABYLON.Color3(0, 0, 0);
+        buttonMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
         button.mesh.material = buttonMaterial;
 
         button.onPointerUpObservable.add(() => {
