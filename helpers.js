@@ -3,10 +3,16 @@ import { datasetConfig } from './config.js';
 export const groupMeshes = {};
 
 export function toggleVisibility(group) {
-    const meshes = groupMeshes[group];
-    if (meshes) {
-        meshes.LineSystem.isVisible = !meshes.LineSystem.isVisible;
-        meshes.ribbon.isVisible = !meshes.ribbon.isVisible;
+    const meshesOrArray = groupMeshes[group];
+    if (!meshesOrArray) return;
+    if (Array.isArray(meshesOrArray)) {
+        meshesOrArray.forEach(m => {
+            m.LineSystem.isVisible = !m.LineSystem.isVisible;
+            m.ribbon.isVisible = !m.ribbon.isVisible;
+        });
+    } else {
+        meshesOrArray.LineSystem.isVisible = !meshesOrArray.LineSystem.isVisible;
+        meshesOrArray.ribbon.isVisible = !meshesOrArray.ribbon.isVisible;
     }
 }
 
@@ -101,7 +107,7 @@ export function connectPoints(points, scene, color, group) {
 
     parentNode.scaling = new BABYLON.Vector3(0.8, 0.8, 0.8);
     parentNode.position = new BABYLON.Vector3(5, 0.5, 13.57);
-    groupMeshes[group] = { parentNode, LineSystem, ribbon };
+    return { parentNode, LineSystem, ribbon };
 }
 
 
