@@ -10,6 +10,8 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     let isPanelVisible = false;
     let isFlying = false;
     let flightSpeed = 0.1;
+    let isOffset = false;
+    let originalPositions = {}; // { groupName: [list of original x-positions], ... }
 
     function startScaling() {
         if (leftController && rightController && pickedMesh) {
@@ -166,28 +168,52 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                 aComponent.onButtonStateChangedObservable.add(() => {
                     if (aComponent.pressed) {
                         const groups = Object.keys(groupMeshes);
-                        const centerIndex = (groups.length - 1) / 2;
+                        isOffset = !isOffset;
+                        let indexOffset = (groups.length - 1) / 2;
+
                         groups.forEach((groupName, i) => {
                             const groupEntry = groupMeshes[groupName];
-                            const groupOffset = (i - centerIndex) * 5;
+                            // ...existing code to handle groupEntry...
                             if (Array.isArray(groupEntry)) {
                                 groupEntry.forEach((subGroup, j) => {
                                     if (Array.isArray(subGroup)) {
-                                        subGroup.forEach((mesh, k) => {
-                                            if (mesh.parentNode) {
-                                                mesh.parentNode.position.x = groupOffset + (j * 5) + (k * 5);
-                                            }
+                                        subGroup.forEach((meshObj, k) => {
+                                            const parentNode = meshObj.parentNode;
+                                            if (!parentNode) return;
+                                            handleOffsetToggle(parentNode, groupName, i, j, k, indexOffset);
                                         });
-                                    } else if (subGroup.parentNode) {
-                                        subGroup.parentNode.position.x = groupOffset + (j * 5);
+                                    } else {
+                                        const parentNode = subGroup.parentNode;
+                                        if (!parentNode) return;
+                                        handleOffsetToggle(parentNode, groupName, i, j, 0, indexOffset);
                                     }
                                 });
-                            } else if (groupEntry.parentNode) {
-                                groupEntry.parentNode.position.x = groupOffset;
+                            } else {
+                                const parentNode = groupEntry.parentNode;
+                                if (!parentNode) return;
+                                handleOffsetToggle(parentNode, groupName, i, 0, 0, indexOffset);
                             }
                         });
                     }
                 });
+
+                function handleOffsetToggle(parentNode, gName, i, j, k, indexOffset) {
+                    const calculatedOffset = (i - indexOffset) * 5 + (j * 5) + (k * 5);
+                    // Store original positions once
+                    if (!originalPositions[gName]) {
+                        originalPositions[gName] = {};
+                    }
+                    const id = `${j}-${k}`;
+                    if (originalPositions[gName][id] === undefined) {
+                        originalPositions[gName][id] = parentNode.position.x;
+                    }
+                    if (isOffset) {
+                        parentNode.position.x = originalPositions[gName][id] + calculatedOffset;
+                    } else {
+                        // Restore original position
+                        parentNode.position.x = originalPositions[gName][id];
+                    }
+                }
             }
         });
     });
