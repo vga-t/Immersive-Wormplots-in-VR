@@ -16,13 +16,6 @@ export function toggleVisibility(group) {
     }
 }
 
-export function getRandomColor() {
-    return new BABYLON.Color3(
-        Math.random(),
-        Math.random(),
-        Math.random()
-    );
-}
 
 export function processData(df, currentDataset, attribute1, attribute2) {
     const cfg = datasetConfig[currentDataset];

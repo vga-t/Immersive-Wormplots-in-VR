@@ -1,7 +1,7 @@
 import { currentDataset, attribute1, attribute2, setupUI } from './ui.js';
 import { datasetConfig } from './config.js';
 import { setupControllers } from './controllers.js';
-import { groupMeshes, getRandomColor, toggleVisibility, processData, connectPoints } from './helpers.js';
+import { groupMeshes, toggleVisibility, processData, connectPoints } from './helpers.js';
 
 async function loadCSVData(currentDataset) {
     try {
@@ -57,6 +57,8 @@ export async function initializeScene() {
         }
         // Call setupControllers to handle all controller logic
         await setupControllers(scene, xrHelper, panel, anchor, ground);
+
+        scene.debugLayer.show();
 
         engine.runRenderLoop(function() {
             scene.render();

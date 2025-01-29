@@ -118,15 +118,40 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                             if (mesh === ground) {
                                 return;
                             }
-                            const group = Object.keys(groupMeshes).find(group =>
-                                groupMeshes[group].parentNode === mesh ||
-                                groupMeshes[group].LineSystem === mesh ||
-                                groupMeshes[group].ribbon === mesh
-                            );
-                            if (group) {
-                                pickedMesh = groupMeshes[group].parentNode;
-                                originalParent = pickedMesh.parent;
-                                pickedMesh.setParent(motionController.rootMesh);
+
+                            const foundGroup = Object.keys(groupMeshes).find(g => {
+                                const entry = groupMeshes[g];
+                                if (Array.isArray(entry)) {
+                                    return entry.some(sub =>
+                                        sub.parentNode === mesh ||
+                                        sub.LineSystem === mesh ||
+                                        sub.ribbon === mesh
+                                    );
+                                } else {
+                                    return entry.parentNode === mesh ||
+                                           entry.LineSystem === mesh ||
+                                           entry.ribbon === mesh;
+                                }
+                            });
+
+                            if (foundGroup) {
+                                const entry = groupMeshes[foundGroup];
+                                if (Array.isArray(entry)) {
+                                    const subItem = entry.find(sub =>
+                                        sub.parentNode === mesh ||
+                                        sub.LineSystem === mesh ||
+                                        sub.ribbon === mesh
+                                    );
+                                    if (subItem) {
+                                        pickedMesh = subItem.parentNode;
+                                    }
+                                } else {
+                                    pickedMesh = entry.parentNode;
+                                }
+                                if (pickedMesh) {
+                                    originalParent = pickedMesh.parent;
+                                    pickedMesh.setParent(motionController.rootMesh);
+                                }
                             }
                         } else {
                             if (pickedMesh) {
