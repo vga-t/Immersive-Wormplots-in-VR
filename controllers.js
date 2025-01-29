@@ -12,6 +12,11 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     let flightSpeed = 0.1;
     let isOffset = false;
     let originalPositions = {}; // { groupName: [list of original x-positions], ... }
+    let offsetValue = 3; // Variable to control the offset amount
+
+    let isGlobalScaling = false;
+    let initialScalingDistance = 0;
+    let initialScales = {};
 
     function startScaling() {
         if (leftController && rightController && pickedMesh) {
@@ -27,6 +32,66 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
         isScaling = false;
         initialDistance = null;
         initialScale = null;
+    }
+
+    function startGlobalScaling(leftController, rightController) {
+        if (leftController && rightController) {
+            initialScalingDistance = BABYLON.Vector3.Distance(
+                leftController.grip.position,
+                rightController.grip.position
+            );
+            // Store initial scales of all meshes
+            initialScales = {};
+            Object.keys(groupMeshes).forEach(group => {
+                const entry = groupMeshes[group];
+                if (Array.isArray(entry)) {
+                    entry.forEach(sub => {
+                        if (sub.parentNode) {
+                            initialScales[sub.parentNode.name] = sub.parentNode.scaling.clone();
+                        }
+                    });
+                } else {
+                    if (entry.parentNode) {
+                        initialScales[entry.parentNode.name] = entry.parentNode.scaling.clone();
+                    }
+                }
+            });
+            isGlobalScaling = true;
+        }
+    }
+
+    function stopGlobalScaling() {
+        isGlobalScaling = false;
+        initialScalingDistance = 0;
+        initialScales = {};
+    }
+
+    function updateGlobalScaling(leftController, rightController) {
+        if (isGlobalScaling && leftController && rightController) {
+            const currentDistance = BABYLON.Vector3.Distance(
+                leftController.grip.position,
+                rightController.grip.position
+            );
+            const scaleFactor = currentDistance / initialScalingDistance;
+            Object.keys(groupMeshes).forEach(group => {
+                const entry = groupMeshes[group];
+                if (Array.isArray(entry)) {
+                    entry.forEach(sub => {
+                        if (sub.parentNode && initialScales[sub.parentNode.name]) {
+                            sub.parentNode.scaling = initialScales[sub.parentNode.name].multiply(
+                                new BABYLON.Vector3(scaleFactor, scaleFactor, scaleFactor)
+                            );
+                        }
+                    });
+                } else {
+                    if (entry.parentNode && initialScales[entry.parentNode.name]) {
+                        entry.parentNode.scaling = initialScales[entry.parentNode.name].multiply(
+                            new BABYLON.Vector3(scaleFactor, scaleFactor, scaleFactor)
+                        );
+                    }
+                }
+            });
+        }
     }
 
     function updatePanelPosition() {
@@ -51,6 +116,10 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
             const xrCamera = xrHelper.baseExperience.camera;
             const forward = xrCamera.getDirection(BABYLON.Vector3.Forward()).scale(flightSpeed);
             xrCamera.position.addInPlace(forward);
+        }
+
+        if (isGlobalScaling) {
+            updateGlobalScaling(leftController, rightController);
         }
     });
 
@@ -105,6 +174,20 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                             startScaling();
                         } else {
                             stopScaling();
+                        }
+                    }
+                });
+
+                const triggerComponent = motionController.getComponent('xr-standard-trigger');
+
+                triggerComponent.onButtonStateChangedObservable.add(() => {
+                    if (triggerComponent.changes.pressed) {
+                        if (triggerComponent.pressed && squeezeComponent && squeezeComponent.pressed) {
+                            startGlobalScaling(leftController, rightController);
+                        } else {
+                            if (isGlobalScaling) {
+                                stopGlobalScaling();
+                            }
                         }
                     }
                 });
@@ -165,6 +248,24 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                     }
                 });
 
+                squeezeComponent.onButtonStateChangedObservable.add(() => {
+                    if (squeezeComponent.changes.pressed) {
+                        if (squeezeComponent.pressed && leftController && rightController) {
+                            // Check if left trigger is also pressed
+                            const leftTrigger = leftController.motionController.getComponent('xr-standard-trigger');
+                            if (leftTrigger && leftTrigger.pressed) {
+                                startGlobalScaling(leftController, rightController);
+                            }
+                        } else {
+                            if (isGlobalScaling) {
+                                stopGlobalScaling();
+                            } else {
+                                // ...existing code...
+                            }
+                        }
+                    }
+                });
+
                 aComponent.onButtonStateChangedObservable.add(() => {
                     if (aComponent.pressed) {
                         const groups = Object.keys(groupMeshes);
@@ -173,7 +274,7 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
 
                         groups.forEach((groupName, i) => {
                             const groupEntry = groupMeshes[groupName];
-                            // ...existing code to handle groupEntry...
+    
                             if (Array.isArray(groupEntry)) {
                                 groupEntry.forEach((subGroup, j) => {
                                     if (Array.isArray(subGroup)) {
@@ -198,7 +299,7 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                 });
 
                 function handleOffsetToggle(parentNode, gName, i, j, k, indexOffset) {
-                    const calculatedOffset = (i - indexOffset) * 5 + (j * 5) + (k * 5);
+                    const calculatedOffset = (i - indexOffset) * offsetValue + (j * offsetValue) + (k * offsetValue);
                     // Store original positions once
                     if (!originalPositions[gName]) {
                         originalPositions[gName] = {};
