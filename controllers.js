@@ -58,6 +58,7 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
             const squeezeComponent = motionController.getComponent('xr-standard-squeeze');
             const menuComponent = motionController.getComponent('x-button');
             const flightComponent = motionController.getComponent('y-button');
+            const aComponent = motionController.getComponent('a-button');
 
             const profileId = motionController.profileId;
             BABYLON.SceneLoader.ImportMesh("", "https://controllers.babylonjs.com/", `${profileId}.glb`, scene, (meshes) => {
@@ -162,7 +163,31 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                     }
                 });
 
-
+                aComponent.onButtonStateChangedObservable.add(() => {
+                    if (aComponent.pressed) {
+                        const groups = Object.keys(groupMeshes);
+                        const centerIndex = (groups.length - 1) / 2;
+                        groups.forEach((groupName, i) => {
+                            const groupEntry = groupMeshes[groupName];
+                            const groupOffset = (i - centerIndex) * 5;
+                            if (Array.isArray(groupEntry)) {
+                                groupEntry.forEach((subGroup, j) => {
+                                    if (Array.isArray(subGroup)) {
+                                        subGroup.forEach((mesh, k) => {
+                                            if (mesh.parentNode) {
+                                                mesh.parentNode.position.x = groupOffset + (j * 5) + (k * 5);
+                                            }
+                                        });
+                                    } else if (subGroup.parentNode) {
+                                        subGroup.parentNode.position.x = groupOffset + (j * 5);
+                                    }
+                                });
+                            } else if (groupEntry.parentNode) {
+                                groupEntry.parentNode.position.x = groupOffset;
+                            }
+                        });
+                    }
+                });
             }
         });
     });
