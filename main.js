@@ -58,7 +58,7 @@ export async function initializeScene() {
         // Call setupControllers to handle all controller logic
         await setupControllers(scene, xrHelper, panel, anchor, ground);
 
-        scene.debugLayer.show();
+        //scene.debugLayer.show();
 
         engine.runRenderLoop(function() {
             scene.render();
