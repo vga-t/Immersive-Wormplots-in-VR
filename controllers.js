@@ -20,6 +20,10 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     let initialScalingDistance = 0;
     let initialScales = {};
 
+    let isDragging = false;
+    let draggingMesh = null;
+    const dragSpeed = .6; // User defined speed
+
     function startScaling() {
         if (leftController && rightController && pickedMesh) {
             const leftPosition = leftController.grip.position;
@@ -104,6 +108,11 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     }
 
     scene.onBeforeRenderObservable.add(() => {
+        if (isDragging && draggingMesh) {
+            const deltaTime = scene.getEngine().getDeltaTime() / 1000;
+            draggingMesh.position.z -= dragSpeed * deltaTime;
+        }
+
         if (isScaling && leftController && rightController && pickedMesh) {
             const leftPosition = leftController.grip.position;
             const rightPosition = rightController.grip.position;
@@ -171,24 +180,42 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                 }
 
                 squeezeComponent.onButtonStateChangedObservable.add(() => {
-                    if (squeezeComponent.changes.pressed) {
-                        if (squeezeComponent.pressed && leftController && rightController && pickedMesh) {
-                            startScaling();
-                        } else {
-                            stopScaling();
+                    if (draggingMesh) {
+                        if (squeezeComponent.changes.pressed && squeezeComponent.pressed) {
+                            isDragging = true;
+                        }
+                    } else {
+                        if (squeezeComponent.changes.pressed) {
+                            if (squeezeComponent.pressed && leftController && rightController && pickedMesh) {
+                                startScaling();
+                            } else {
+                                stopScaling();
+                            }
                         }
                     }
                 });
 
-                const triggerComponent = motionController.getComponent('xr-standard-trigger');
-
                 triggerComponent.onButtonStateChangedObservable.add(() => {
-                    if (triggerComponent.changes.pressed) {
-                        if (triggerComponent.pressed && squeezeComponent && squeezeComponent.pressed) {
-                            startGlobalScaling(leftController, rightController);
+                    if (triggerComponent.changes.pressed && triggerComponent.pressed) {
+                        if (isDragging) {
+                            isDragging = false;
+                            draggingMesh = null;
                         } else {
-                            if (isGlobalScaling) {
-                                stopGlobalScaling();
+                            let mesh = scene.meshUnderPointer;
+                            if (xrHelper.pointerSelection.getMeshUnderPointer) {
+                                mesh = xrHelper.pointerSelection.getMeshUnderPointer(controller.uniqueId);
+                            }
+                            if (mesh && mesh !== ground) {
+                                const processed = Object.values(groupMeshes).some(entry => {
+                                    if (Array.isArray(entry)) {
+                                        return entry.some(sub => sub.parentNode === mesh.parent);
+                                    } else {
+                                        return entry.parentNode === mesh.parent;
+                                    }
+                                });
+                                if (processed) {
+                                    draggingMesh = mesh.parent;
+                                }
                             }
                         }
                     }
