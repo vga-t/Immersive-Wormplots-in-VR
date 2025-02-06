@@ -1,4 +1,6 @@
 import { groupMeshes } from './helpers.js';
+import { currentDataset } from './ui.js';
+import { datasetConfig } from './config.js';
 
 export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     let leftController, rightController;
@@ -268,52 +270,107 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
 
                 aComponent.onButtonStateChangedObservable.add(() => {
                     if (aComponent.pressed) {
-                        const groups = Object.keys(groupMeshes);
                         isOffset = !isOffset;
-                        let indexOffset = (groups.length - 1) / 2;
+                        const groups = Object.keys(groupMeshes);
 
-                        groups.forEach((groupName, i) => {
-                            const groupEntry = groupMeshes[groupName];
-    
-                            if (Array.isArray(groupEntry)) {
-                                groupEntry.forEach((subGroup, j) => {
-                                    if (Array.isArray(subGroup)) {
-                                        subGroup.forEach((meshObj, k) => {
-                                            const parentNode = meshObj.parentNode;
-                                            if (!parentNode) return;
-                                            handleOffsetToggle(parentNode, groupName, i, j, k, indexOffset);
-                                        });
-                                    } else {
-                                        const parentNode = subGroup.parentNode;
-                                        if (!parentNode) return;
-                                        handleOffsetToggle(parentNode, groupName, i, j, 0, indexOffset);
+                        if (currentDataset === 'WeatherDetailed') {
+                            // For detailed weather: compute offset per color.
+                            const dsColors = datasetConfig[currentDataset].colors;
+                            const mid = (dsColors.length - 1) / 2;
+                            // For each group, use the index modulo colors to determine offset.
+                            groups.forEach((groupName, i) => {
+                                const colorIndex = i % dsColors.length;
+                                const offset = (colorIndex - mid) * offsetValue;
+                                // For each mesh in this group, apply the same offset.
+                                const entry = groupMeshes[groupName];
+                                const updateMeshOffset = (parentNode, key) => {
+                                    if (!originalPositions[groupName]) {
+                                        originalPositions[groupName] = {};
                                     }
-                                });
-                            } else {
-                                const parentNode = groupEntry.parentNode;
-                                if (!parentNode) return;
-                                handleOffsetToggle(parentNode, groupName, i, 0, 0, indexOffset);
-                            }
-                        });
+                                    if (originalPositions[groupName][key] === undefined) {
+                                        originalPositions[groupName][key] = parentNode.position.x;
+                                    }
+                                    parentNode.position.x = isOffset ?
+                                        originalPositions[groupName][key] + offset :
+                                        originalPositions[groupName][key];
+                                };
+                                if (Array.isArray(entry)) {
+                                    entry.forEach((subGroup, j) => {
+                                        if (Array.isArray(subGroup)) {
+                                            subGroup.forEach((meshObj, k) => {
+                                                if (meshObj.parentNode) {
+                                                    updateMeshOffset(meshObj.parentNode, `${j}-${k}`);
+                                                }
+                                            });
+                                        } else {
+                                            if (subGroup.parentNode) {
+                                                updateMeshOffset(subGroup.parentNode, `${j}-0`);
+                                            }
+                                        }
+                                    });
+                                } else {
+                                    if (entry.parentNode) {
+                                        updateMeshOffset(entry.parentNode, `0-0`);
+                                    }
+                                }
+                            });
+                        } else {
+                            // Default offsetting logic for other datasets.
+                            const indexOffset = (groups.length - 1) / 2;
+                            const handleOffsetToggle = (parentNode, gName, i, j, k, idxOffset) => {
+                                const calculatedOffset = (i - idxOffset) * offsetValue + (j * offsetValue) + (k * offsetValue);
+                                if (!originalPositions[gName]) {
+                                    originalPositions[gName] = {};
+                                }
+                                const key = `${j}-${k}`;
+                                if (originalPositions[gName][key] === undefined) {
+                                    originalPositions[gName][key] = parentNode.position.x;
+                                }
+                                parentNode.position.x = isOffset ?
+                                    originalPositions[gName][key] + calculatedOffset :
+                                    originalPositions[gName][key];
+                            };
+
+                            groups.forEach((groupName, i) => {
+                                const groupEntry = groupMeshes[groupName];
+                                if (Array.isArray(groupEntry)) {
+                                    groupEntry.forEach((subGroup, j) => {
+                                        if (Array.isArray(subGroup)) {
+                                            subGroup.forEach((meshObj, k) => {
+                                                if (meshObj.parentNode) {
+                                                    handleOffsetToggle(meshObj.parentNode, groupName, i, j, k, indexOffset);
+                                                }
+                                            });
+                                        } else {
+                                            if (subGroup.parentNode) {
+                                                handleOffsetToggle(subGroup.parentNode, groupName, i, j, 0, indexOffset);
+                                            }
+                                        }
+                                    });
+                                } else {
+                                    if (groupEntry.parentNode) {
+                                        handleOffsetToggle(groupEntry.parentNode, groupName, i, 0, 0, indexOffset);
+                                    }
+                                }
+                            });
+                        }
                     }
                 });
 
+                // ...remaining right-controller code...
                 function handleOffsetToggle(parentNode, gName, i, j, k, indexOffset) {
+                    // (original function not used for detailed weather)
                     const calculatedOffset = (i - indexOffset) * offsetValue + (j * offsetValue) + (k * offsetValue);
-                    // Store original positions once
                     if (!originalPositions[gName]) {
                         originalPositions[gName] = {};
                     }
-                    const id = `${j}-${k}`;
-                    if (originalPositions[gName][id] === undefined) {
-                        originalPositions[gName][id] = parentNode.position.x;
+                    const key = `${j}-${k}`;
+                    if (originalPositions[gName][key] === undefined) {
+                        originalPositions[gName][key] = parentNode.position.x;
                     }
-                    if (isOffset) {
-                        parentNode.position.x = originalPositions[gName][id] + calculatedOffset;
-                    } else {
-                        // Restore original position
-                        parentNode.position.x = originalPositions[gName][id];
-                    }
+                    parentNode.position.x = isOffset ?
+                        originalPositions[gName][key] + calculatedOffset :
+                        originalPositions[gName][key];
                 }
             }
         });
