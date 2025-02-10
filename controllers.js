@@ -179,22 +179,18 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                     });
                 }
 
+                // Updated left squeeze handler: only use for scaling, no drag toggling
                 squeezeComponent.onButtonStateChangedObservable.add(() => {
-                    if (draggingMesh) {
-                        if (squeezeComponent.changes.pressed && squeezeComponent.pressed) {
-                            isDragging = true;
-                        }
-                    } else {
-                        if (squeezeComponent.changes.pressed) {
-                            if (squeezeComponent.pressed && leftController && rightController && pickedMesh) {
-                                startScaling();
-                            } else {
-                                stopScaling();
-                            }
+                    if (squeezeComponent.changes.pressed) {
+                        if (squeezeComponent.pressed && leftController && rightController && pickedMesh) {
+                            startScaling();
+                        } else {
+                            stopScaling();
                         }
                     }
                 });
 
+                // Left trigger now solely toggles drag movement
                 triggerComponent.onButtonStateChangedObservable.add(() => {
                     if (triggerComponent.changes.pressed && triggerComponent.pressed) {
                         if (isDragging) {
@@ -215,6 +211,7 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                                 });
                                 if (processed) {
                                     draggingMesh = mesh.parent;
+                                    isDragging = true;
                                 }
                             }
                         }
