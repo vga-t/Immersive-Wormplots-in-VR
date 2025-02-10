@@ -23,6 +23,8 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     let isDragging = false;
     let draggingMesh = null;
     const dragSpeed = .6; // User defined speed
+    let movementAxis = 'z'; // New: current movement axis ("z" or "x")
+    let directionSign = 1;  // New: positive or negative movement sign
 
     function startScaling() {
         if (leftController && rightController && pickedMesh) {
@@ -110,7 +112,11 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     scene.onBeforeRenderObservable.add(() => {
         if (isDragging && draggingMesh) {
             const deltaTime = scene.getEngine().getDeltaTime() / 1000;
-            draggingMesh.position.z -= dragSpeed * deltaTime;
+            if (movementAxis === 'z') {
+                draggingMesh.position.z += directionSign * dragSpeed * deltaTime;
+            } else if (movementAxis === 'x') {
+                draggingMesh.position.x += directionSign * dragSpeed * deltaTime;
+            }
         }
 
         if (isScaling && leftController && rightController && pickedMesh) {
@@ -182,10 +188,17 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                 // Updated left squeeze handler: only use for scaling, no drag toggling
                 squeezeComponent.onButtonStateChangedObservable.add(() => {
                     if (squeezeComponent.changes.pressed) {
-                        if (squeezeComponent.pressed && leftController && rightController && pickedMesh) {
-                            startScaling();
+                        if (squeezeComponent.pressed) {
+                            if (draggingMesh) {
+                                // Toggle sign of movement direction when dragging
+                                directionSign *= -1;
+                            } else if (leftController && rightController && pickedMesh) {
+                                startScaling();
+                            }
                         } else {
-                            stopScaling();
+                            if (!draggingMesh) {
+                                stopScaling();
+                            }
                         }
                     }
                 });
@@ -276,17 +289,19 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
 
                 squeezeComponent.onButtonStateChangedObservable.add(() => {
                     if (squeezeComponent.changes.pressed) {
-                        if (squeezeComponent.pressed && leftController && rightController) {
-                            // Check if left trigger is also pressed
+                        if (squeezeComponent.pressed) {
+                            // If left trigger is pressed, do global scaling
                             const leftTrigger = leftController.motionController.getComponent('xr-standard-trigger');
                             if (leftTrigger && leftTrigger.pressed) {
                                 startGlobalScaling(leftController, rightController);
                             }
+                            // Otherwise, if dragging, use right squeeze to toggle movement axis
+                            else if (draggingMesh) {
+                                movementAxis = (movementAxis === 'z') ? 'x' : 'z';
+                            }
                         } else {
                             if (isGlobalScaling) {
                                 stopGlobalScaling();
-                            } else {
-                                // ...existing code...
                             }
                         }
                     }
