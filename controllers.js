@@ -22,7 +22,7 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
 
     let isDragging = false;
     let draggingMesh = null;
-    const dragSpeed = 10; // User defined speed
+    let dragSpeed = 10; // User defined speed
     let movementAxis = 'z'; // New: current movement axis ("z" or "x")
     let directionSign = 1;  // New: positive or negative movement sign
 
