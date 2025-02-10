@@ -22,7 +22,7 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
 
     let isDragging = false;
     let draggingMesh = null;
-    const dragSpeed = .6; // User defined speed
+    const dragSpeed = 10; // User defined speed
     let movementAxis = 'z'; // New: current movement axis ("z" or "x")
     let directionSign = 1;  // New: positive or negative movement sign
 
@@ -414,4 +414,24 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
             }
         });
     });
+
+    // Setup slider inputs for offsetValue, flightSpeed and dragSpeed
+    const offsetSlider = document.getElementById('offsetSlider');
+    const flightSpeedSlider = document.getElementById('flightSpeedSlider');
+    const dragSpeedSlider = document.getElementById('dragSpeedSlider');
+
+    if (offsetSlider) {
+        offsetSlider.value = offsetValue;
+        offsetSlider.oninput = () => { offsetValue = parseFloat(offsetSlider.value); };
+    }
+
+    if (flightSpeedSlider) {
+        flightSpeedSlider.value = flightSpeed;
+        flightSpeedSlider.oninput = () => { flightSpeed = parseFloat(flightSpeedSlider.value); };
+    }
+
+    if (dragSpeedSlider) {
+        dragSpeedSlider.value = dragSpeed;
+        dragSpeedSlider.oninput = () => { dragSpeed = parseFloat(dragSpeedSlider.value); };
+    }
 }
