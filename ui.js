@@ -10,7 +10,7 @@ export function debounceInitializeScene(initializeScene) {
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(() => {
         initializeScene();
-    }, 300); // Adjust the delay as needed
+    }, 500); // Adjust the delay as needed
 }
 
 // Create or update UI controls

@@ -15,63 +15,69 @@ async function loadCSVData(currentDataset) {
 }
 
 export async function initializeScene() {
-    try {
-        setupUI(initializeScene); // Ensure we have up-to-date UI selections
+    // Exit active VR session if one exists
+    if (window.xrHelper && window.xrHelper.baseExperience) {
+        await window.xrHelper.baseExperience.exitXRAsync();
+        window.xrHelper = undefined;
+    }
+    
+    setupUI(initializeScene); // Ensure we have up-to-date UI selections
 
-        const { canvas, engine, scene } = setupEngine();
-        const camera = setupCamera(scene, canvas);
-        const walls = setupWalls(scene);
-        const lights = setupLights(scene, walls);
-        const ground = setupGround(scene);
-        const xrHelper = await setupXR(scene, ground);
-        const { manager, panel, anchor } = setupUIManager(scene);
-        const df = await loadCSVData(currentDataset);
+    const { canvas, engine, scene } = setupEngine();
+    const camera = setupCamera(scene, canvas);
+    const walls = setupWalls(scene);
+    const lights = setupLights(scene, walls);
+    const ground = setupGround(scene);
+    
+    // Create new XR session and assign it globally
+    const xrHelper = await setupXR(scene, ground);
+    window.xrHelper = xrHelper;
+    
+    const { manager, panel, anchor } = setupUIManager(scene);
+    const df = await loadCSVData(currentDataset);
 
-        let Groups, allBoxPlotValues;
-        if (currentDataset === 'WeatherDetailed') {
-            // Placeholder for new data processing logic
+    let Groups, allBoxPlotValues;
+    if (currentDataset === 'WeatherDetailed') {
+        // Placeholder for new data processing logic
 
 
-            ({ Groups, allBoxPlotValues } = processDetailedWeatherData(df, attribute1, attribute2));
-
-            const colors = {};
-            const datasetColors = datasetConfig[currentDataset].colors;
-            Groups.forEach((group, index) => {
-                colors[group] = datasetColors[index % datasetColors.length];
-            });
-            renderVisualization(allBoxPlotValues, colors, scene);
-            setupToggleButtons(Groups, colors, panel, scene);
-
-        } else {
-            ({ Groups, allBoxPlotValues } = processData(df, currentDataset, attribute1, attribute2));
-        
+        ({ Groups, allBoxPlotValues } = processDetailedWeatherData(df, attribute1, attribute2));
 
         const colors = {};
         const datasetColors = datasetConfig[currentDataset].colors;
         Groups.forEach((group, index) => {
             colors[group] = datasetColors[index % datasetColors.length];
         });
-
         renderVisualization(allBoxPlotValues, colors, scene);
         setupToggleButtons(Groups, colors, panel, scene);
-        }
-        // Call setupControllers to handle all controller logic
-        await setupControllers(scene, xrHelper, panel, anchor, ground);
 
-        //scene.debugLayer.show();
+    } else {
+        ({ Groups, allBoxPlotValues } = processData(df, currentDataset, attribute1, attribute2));
+        
 
-        engine.runRenderLoop(function() {
-            scene.render();
-            var fps = engine.getFps().toFixed();
-            document.getElementById('fpsCounter').innerText = fps + " FPS";
-        });
+    const colors = {};
+    const datasetColors = datasetConfig[currentDataset].colors;
+    Groups.forEach((group, index) => {
+        colors[group] = datasetColors[index % datasetColors.length];
+    });
 
-        window.addEventListener("resize", function() {
-            engine.resize();
-        });
-    } catch (error) {
-        console.error('Error initializing scene:', error);
+    renderVisualization(allBoxPlotValues, colors, scene);
+    setupToggleButtons(Groups, colors, panel, scene);
     }
+    // Call setupControllers to handle all controller logic
+    await setupControllers(scene, xrHelper, panel, anchor, ground);
+
+    //scene.debugLayer.show();
+
+    engine.runRenderLoop(function() {
+        scene.render();
+        var fps = engine.getFps().toFixed();
+        document.getElementById('fpsCounter').innerText = fps + " FPS";
+    });
+
+    window.addEventListener("resize", function() {
+        engine.resize();
+    });
 }
 
 function setupEngine() {
