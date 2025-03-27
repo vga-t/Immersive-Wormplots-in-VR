@@ -101,7 +101,6 @@ export function connectPoints(points, scene, color, group) {
     parentNode.scaling = new BABYLON.Vector3(0.8, 0.8, 0.8);
     parentNode.position = new BABYLON.Vector3(5, 0.5, 13.57);
     
-    // Make parentNode draggable with right trigger for Detailed weather data
     if (group === 'DetailedWeatherData') {
         controller.onTriggerRightPressedObservable.add(() => {
             parentNode.parent = controller;

@@ -15,13 +15,12 @@ async function loadCSVData(currentDataset) {
 }
 
 export async function initializeScene() {
-    // Exit active VR session if one exists
     if (window.xrHelper && window.xrHelper.baseExperience) {
         await window.xrHelper.baseExperience.exitXRAsync();
         window.xrHelper = undefined;
     }
     
-    setupUI(initializeScene); // Ensure we have up-to-date UI selections
+    setupUI(initializeScene); 
 
     const { canvas, engine, scene } = setupEngine();
     const camera = setupCamera(scene, canvas);
@@ -29,7 +28,6 @@ export async function initializeScene() {
     const lights = setupLights(scene, walls);
     const ground = setupGround(scene);
     
-    // Create new XR session and assign it globally
     const xrHelper = await setupXR(scene, ground);
     window.xrHelper = xrHelper;
     
@@ -38,8 +36,6 @@ export async function initializeScene() {
 
     let Groups, allBoxPlotValues;
     if (currentDataset === 'WeatherDetailed') {
-        // Placeholder for new data processing logic
-
 
         ({ Groups, allBoxPlotValues } = processDetailedWeatherData(df, attribute1, attribute2));
 
@@ -64,7 +60,6 @@ export async function initializeScene() {
     renderVisualization(allBoxPlotValues, colors, scene);
     setupToggleButtons(Groups, colors, panel, scene);
     }
-    // Call setupControllers to handle all controller logic
     await setupControllers(scene, xrHelper, panel, anchor, ground);
 
     //scene.debugLayer.show();
@@ -168,7 +163,6 @@ function setupLights(scene, walls) {
 }
 
 function setupToggleButtons(Groups, colors, panel, scene) {
-    // Add buttons to the panel
     function addButton(group, color) {
         const button = new BABYLON.GUI.HolographicButton("button_" + group);
         button.width = "0.15";
@@ -199,7 +193,6 @@ function renderVisualization(allBoxPlotValues, colors, scene) {
                 groupMeshes[groupData.group].push(meshes);
             });
         } else {
-            // ...existing code for single group line...
             const meshes = connectPoints(groupData.values, scene, colors[groupData.group], groupData.group);
             groupMeshes[groupData.group] = meshes;
         }
@@ -250,7 +243,6 @@ function processDetailedWeatherData(df, attribute1, attribute2) {
             
         }
 
-        // Chunk the data into subgroups of 12 timestamps each:
         const subBoxPlotValues = [];
 
         for (let i = 0; i < boxPLotvalues.length; i += 12) {
@@ -260,16 +252,7 @@ function processDetailedWeatherData(df, attribute1, attribute2) {
     }
 
 
-
-
-
-
-
-
-
-    // Placeholder for detailed weather data processing logic
     return { Groups, allBoxPlotValues };
 }
 
-// Initialize the scene when the script is loaded
 initializeScene();

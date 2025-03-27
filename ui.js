@@ -5,15 +5,13 @@ export let attribute1 = '';
 export let attribute2 = '';
 let debounceTimeout;
 
-// Debounce function to delay scene initialization
 export function debounceInitializeScene(initializeScene) {
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(() => {
         initializeScene();
-    }, 500); // Adjust the delay as needed
+    }, 500); 
 }
 
-// Create or update UI controls
 export function setupUI(initializeScene) {
     const datasetSelect = document.getElementById('datasetSelect');
     const attr1Select = document.getElementById('attribute1Select');

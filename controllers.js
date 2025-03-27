@@ -13,8 +13,8 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
     let isFlying = false;
     let flightSpeed = 0.1;
     let isOffset = false;
-    let originalPositions = {}; // { groupName: [list of original x-positions], ... }
-    let offsetValue = 3; // Variable to control the offset amount
+    let originalPositions = {}; 
+    let offsetValue = 3; 
 
     let isGlobalScaling = false;
     let initialScalingDistance = 0;
@@ -22,9 +22,9 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
 
     let isDragging = false;
     let draggingMesh = null;
-    let dragSpeed = 10; // User defined speed
-    let movementAxis = 'z'; // New: current movement axis ("z" or "x")
-    let directionSign = 1;  // New: positive or negative movement sign
+    let dragSpeed = 10; 
+    let movementAxis = 'z'; 
+    let directionSign = 1;  
 
     function startScaling() {
         if (leftController && rightController && pickedMesh) {
@@ -48,7 +48,7 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                 leftController.grip.position,
                 rightController.grip.position
             );
-            // Store initial scales of all meshes
+            
             initialScales = {};
             Object.keys(groupMeshes).forEach(group => {
                 const entry = groupMeshes[group];
@@ -185,12 +185,10 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                     });
                 }
 
-                // Updated left squeeze handler: only use for scaling, no drag toggling
                 squeezeComponent.onButtonStateChangedObservable.add(() => {
                     if (squeezeComponent.changes.pressed) {
                         if (squeezeComponent.pressed) {
                             if (draggingMesh) {
-                                // Toggle sign of movement direction when dragging
                                 directionSign *= -1;
                             } else if (leftController && rightController && pickedMesh) {
                                 startScaling();
@@ -203,7 +201,6 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                     }
                 });
 
-                // Left trigger now solely toggles drag movement
                 triggerComponent.onButtonStateChangedObservable.add(() => {
                     if (triggerComponent.changes.pressed && triggerComponent.pressed) {
                         if (isDragging) {
@@ -290,12 +287,10 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                 squeezeComponent.onButtonStateChangedObservable.add(() => {
                     if (squeezeComponent.changes.pressed) {
                         if (squeezeComponent.pressed) {
-                            // If left trigger is pressed, do global scaling
                             const leftTrigger = leftController.motionController.getComponent('xr-standard-trigger');
                             if (leftTrigger && leftTrigger.pressed) {
                                 startGlobalScaling(leftController, rightController);
                             }
-                            // Otherwise, if dragging, use right squeeze to toggle movement axis
                             else if (draggingMesh) {
                                 movementAxis = (movementAxis === 'z') ? 'x' : 'z';
                             }
@@ -313,14 +308,11 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                         const groups = Object.keys(groupMeshes);
 
                         if (currentDataset === 'WeatherDetailed') {
-                            // For detailed weather: compute offset per color.
                             const dsColors = datasetConfig[currentDataset].colors;
                             const mid = (dsColors.length - 1) / 2;
-                            // For each group, use the index modulo colors to determine offset.
                             groups.forEach((groupName, i) => {
                                 const colorIndex = i % dsColors.length;
                                 const offset = (colorIndex - mid) * offsetValue;
-                                // For each mesh in this group, apply the same offset.
                                 const entry = groupMeshes[groupName];
                                 const updateMeshOffset = (parentNode, key) => {
                                     if (!originalPositions[groupName]) {
@@ -354,7 +346,6 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                                 }
                             });
                         } else {
-                            // Default offsetting logic for other datasets.
                             const indexOffset = (groups.length - 1) / 2;
                             const handleOffsetToggle = (parentNode, gName, i, j, k, idxOffset) => {
                                 const calculatedOffset = (i - idxOffset) * offsetValue + (j * offsetValue) + (k * offsetValue);
@@ -395,10 +386,7 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
                         }
                     }
                 });
-
-                // ...remaining right-controller code...
                 function handleOffsetToggle(parentNode, gName, i, j, k, indexOffset) {
-                    // (original function not used for detailed weather)
                     const calculatedOffset = (i - indexOffset) * offsetValue + (j * offsetValue) + (k * offsetValue);
                     if (!originalPositions[gName]) {
                         originalPositions[gName] = {};
@@ -415,7 +403,6 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
         });
     });
 
-    // Setup slider inputs for offsetValue, flightSpeed and dragSpeed
     const offsetSlider = document.getElementById('offsetSlider');
     const flightSpeedSlider = document.getElementById('flightSpeedSlider');
     const dragSpeedSlider = document.getElementById('dragSpeedSlider');
