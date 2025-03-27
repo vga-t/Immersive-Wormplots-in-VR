@@ -91,6 +91,7 @@ export function connectPoints(points, scene, color, group) {
     const ribbon = BABYLON.Mesh.CreateRibbon(`ribbon_${group}`, paths, false, false, 0, scene);
     const ribbonMaterial = new BABYLON.StandardMaterial(`ribbonMaterial_${group}`, scene);
     ribbonMaterial.diffuseColor = color;
+    ribbonMaterial.emmissiveColor = color;
     ribbonMaterial.backFaceCulling = false;
     ribbon.material = ribbonMaterial;
 
