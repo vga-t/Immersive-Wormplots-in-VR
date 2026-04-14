@@ -30,7 +30,8 @@ export async function initializeScene() {
     
     const xrHelper = await setupXR(scene, ground);
     window.xrHelper = xrHelper;
-    
+    // scene.debugLayer.show();
+
     const { manager, panel, anchor } = setupUIManager(scene);
     const df = await loadCSVData(currentDataset);
 
