@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Immersive WebXR wormplot visualization for spatial analytics">
+    <title>Immersive Wormplots in VR</title>
     <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.min.js"></script>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/materialsLibrary/babylon.gridMaterial.min.js"></script>
     <script src="https://cdn.babylonjs.com/webxr/babylon.webXR.min.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.min.js"></script>
     <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
-    <div id="fpsCounter" style="position: absolute; top: 10px; left: 10px; color: white; background-color: black; padding: 5px;"></div>
     <style>
         html, body {
-            overflow: hidden; /* Hide scrollbars */
+            overflow: hidden;
             width: 100%;
             height: 100%;
             margin: 0;
@@ -22,17 +22,31 @@
         #renderCanvas {
             width: 100%;
             height: 100%;
-            touch-action: none; /* Prevent default touch behaviors */
+            touch-action: none;
+        }
+        #fpsCounter {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            font-family: monospace;
+            font-size: 14px;
+            border-radius: 4px;
+            z-index: 999;
         }
         #controls {
             position: absolute;
             top: 10px;
-            right: 10px; /* Move to the top right corner */
+            right: 10px;
             background-color: rgba(0,0,0,0.6);
             padding: 8px;
             border-radius: 4px;
             z-index: 999;
             color: white;
+            font-family: sans-serif;
+            font-size: 13px;
         }
         select {
             margin: 4px;
@@ -42,8 +56,8 @@
     </style>
 </head>
 <body>
-    
-    <canvas id="renderCanvas" style="width: 100%; height: 100vh;"></canvas>
+    <canvas id="renderCanvas"></canvas>
+    <div id="fpsCounter"></div>
     <div id="controls">
         <select id="datasetSelect">
             <option value="Weather">Weather Data</option>
@@ -52,18 +66,6 @@
         </select>
         <select id="attribute1Select"></select>
         <select id="attribute2Select"></select>
-        <div>
-            <label for="offsetSlider">Offset Value:</label>
-            <input type="range" id="offsetSlider" min="0" max="10" step="0.1" value="3">
-        </div>
-        <div>
-            <label for="flightSpeedSlider">Flight Speed:</label>
-            <input type="range" id="flightSpeedSlider" min="0" max="1" step="0.01" value="0.6">
-        </div>
-        <div>
-            <label for="dragSpeedSlider">Drag Speed:</label>
-            <input type="range" id="dragSpeedSlider" min="0" max="3" step="0.1" value="1">
-        </div>
     </div>
     <script type="module" src="./main.js"></script>
 </body>

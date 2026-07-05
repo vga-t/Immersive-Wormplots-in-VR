@@ -5,14 +5,14 @@ export let attribute1 = '';
 export let attribute2 = '';
 let debounceTimeout;
 
-export function debounceInitializeScene(initializeScene) {
+function debounce(callback) {
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(() => {
-        initializeScene();
-    }, 500); 
+        callback();
+    }, 500);
 }
 
-export function setupUI(initializeScene) {
+export function setupUI(onDataChange) {
     const datasetSelect = document.getElementById('datasetSelect');
     const attr1Select = document.getElementById('attribute1Select');
     const attr2Select = document.getElementById('attribute2Select');
@@ -42,19 +42,19 @@ export function setupUI(initializeScene) {
     datasetSelect.onchange = () => {
         currentDataset = datasetSelect.value;
         populateAttributes();
-        debounceInitializeScene(initializeScene);
+        debounce(onDataChange);
     };
 
     attr1Select.onchange = () => {
         attribute1 = attr1Select.value;
         populateAttributes();
-        debounceInitializeScene(initializeScene);
+        debounce(onDataChange);
     };
 
     attr2Select.onchange = () => {
         attribute2 = attr2Select.value;
         populateAttributes();
-        debounceInitializeScene(initializeScene);
+        debounce(onDataChange);
     };
 
     populateAttributes();

@@ -1,159 +1,136 @@
-import { groupMeshes } from './helpers.js';
+import { state } from './state.js';
 import { currentDataset } from './ui.js';
 import { datasetConfig } from './config.js';
+import { updateAllGroupMeshUniforms } from './helpers.js';
 
-export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
-    let leftController, rightController;
-    let initialDistance = null;
-    let initialScale = null;
-    let isScaling = false;
-    let pickedMesh = null;
-    let originalParent = null;
-    let isPanelVisible = false;
-    let isFlying = false;
-    let flightSpeed = 0.1;
-    let isOffset = false;
-    let originalPositions = {}; 
-    let offsetValue = 3; 
+export async function setupControllers(scene, xrHelper, ground) {
+    let leftController = null;
+    let rightController = null;
 
-    let isGlobalScaling = false;
-    let initialScalingDistance = 0;
-    let initialScales = {};
+    // Pinch-to-scale variables
+    let isSqueezingScale = false;
+    let initialMidpoint = null;
+    let initialDistance = 0;
+    let initialContainerScale = null;
+    let initialContainerPos = null;
 
-    let isDragging = false;
-    let draggingMesh = null;
-    let dragSpeed = 10; 
-    let movementAxis = 'z'; 
-    let directionSign = 1;  
+    // Minimum scale clamp to prevent zero/negative/degenerate scaling
+    const MIN_SCALE = 0.1;
 
-    function startScaling() {
-        if (leftController && rightController && pickedMesh) {
-            const leftPosition = leftController.grip.position;
-            const rightPosition = rightController.grip.position;
-            initialDistance = BABYLON.Vector3.Distance(leftPosition, rightPosition);
-            initialScale = pickedMesh.scaling.clone();
-            isScaling = true;
+    function checkFloorCollision() {
+        if (!state.boundaryVolume || !state.visualizationContainer) return;
+        const floorY = ground.position.y;
+
+        // Calculate world positions of bottom corners of the bounding box
+        const worldMatrix = state.boundaryVolume.computeWorldMatrix(true);
+        const bottomCorners = [
+            new BABYLON.Vector3(0.75, -0.75, 1.5),
+            new BABYLON.Vector3(-0.75, -0.75, 1.5),
+            new BABYLON.Vector3(0.75, -0.75, -1.5),
+            new BABYLON.Vector3(-0.75, -0.75, -1.5),
+        ];
+
+        let minY = Infinity;
+        bottomCorners.forEach(c => {
+            const worldPoint = BABYLON.Vector3.TransformCoordinates(c, worldMatrix);
+            if (worldPoint.y < minY) {
+                minY = worldPoint.y;
+            }
+        });
+
+        // Push visualization up if it clipped through the floor
+        if (minY < floorY) {
+            const deltaY = floorY - minY;
+            state.visualizationContainer.position.y += deltaY;
         }
     }
 
-    function stopScaling() {
-        isScaling = false;
-        initialDistance = null;
-        initialScale = null;
-    }
-
-    function startGlobalScaling(leftController, rightController) {
-        if (leftController && rightController) {
-            initialScalingDistance = BABYLON.Vector3.Distance(
-                leftController.grip.position,
-                rightController.grip.position
-            );
-            
-            initialScales = {};
-            Object.keys(groupMeshes).forEach(group => {
-                const entry = groupMeshes[group];
-                if (Array.isArray(entry)) {
-                    entry.forEach(sub => {
-                        if (sub.parentNode) {
-                            initialScales[sub.parentNode.name] = sub.parentNode.scaling.clone();
-                        }
-                    });
-                } else {
-                    if (entry.parentNode) {
-                        initialScales[entry.parentNode.name] = entry.parentNode.scaling.clone();
-                    }
-                }
-            });
-            isGlobalScaling = true;
-        }
-    }
-
-    function stopGlobalScaling() {
-        isGlobalScaling = false;
-        initialScalingDistance = 0;
-        initialScales = {};
-    }
-
-    function updateGlobalScaling(leftController, rightController) {
-        if (isGlobalScaling && leftController && rightController) {
-            const currentDistance = BABYLON.Vector3.Distance(
-                leftController.grip.position,
-                rightController.grip.position
-            );
-            const scaleFactor = currentDistance / initialScalingDistance;
-            Object.keys(groupMeshes).forEach(group => {
-                const entry = groupMeshes[group];
-                if (Array.isArray(entry)) {
-                    entry.forEach(sub => {
-                        if (sub.parentNode && initialScales[sub.parentNode.name]) {
-                            sub.parentNode.scaling = initialScales[sub.parentNode.name].multiply(
-                                new BABYLON.Vector3(scaleFactor, scaleFactor, scaleFactor)
-                            );
-                        }
-                    });
-                } else {
-                    if (entry.parentNode && initialScales[entry.parentNode.name]) {
-                        entry.parentNode.scaling = initialScales[entry.parentNode.name].multiply(
-                            new BABYLON.Vector3(scaleFactor, scaleFactor, scaleFactor)
-                        );
-                    }
-                }
-            });
-        }
-    }
-
-    function updatePanelPosition() {
-        const xrCamera = xrHelper.baseExperience.camera;
-        const forward = xrCamera.getDirection(BABYLON.Vector3.Forward());
-        anchor.position = xrCamera.position.add(forward.scale(2));
-        anchor.lookAt(xrCamera.position, 0, Math.PI, Math.PI);
-    }
-
+    // Per-frame update loop for scaling, dragging, and floor collision
     scene.onBeforeRenderObservable.add(() => {
-        if (isDragging && draggingMesh) {
-            const deltaTime = scene.getEngine().getDeltaTime() / 1000;
-            if (movementAxis === 'z') {
-                draggingMesh.position.z += directionSign * dragSpeed * deltaTime;
-            } else if (movementAxis === 'x') {
-                draggingMesh.position.x += directionSign * dragSpeed * deltaTime;
+        if (!state.visualizationContainer) return;
+
+        // 1. Handle Pinch-to-scale (both controllers squeezing)
+        if (isSqueezingScale && leftController && rightController) {
+            const leftPos = leftController.grip.position;
+            const rightPos = rightController.grip.position;
+            const currentMidpoint = BABYLON.Vector3.Center(leftPos, rightPos);
+            const currentDist = BABYLON.Vector3.Distance(leftPos, rightPos);
+
+            if (initialDistance > 0.01) {
+                const scaleFactor = currentDist / initialDistance;
+                const newScale = initialContainerScale.scale(scaleFactor);
+                // Clamp minimum scale on all axes
+                newScale.x = Math.max(newScale.x, MIN_SCALE);
+                newScale.y = Math.max(newScale.y, MIN_SCALE);
+                newScale.z = Math.max(newScale.z, MIN_SCALE);
+                state.visualizationContainer.scaling = newScale;
+                // Move container with hands' translation without scaling the offset distance
+                state.visualizationContainer.position = currentMidpoint.add(
+                    initialContainerPos.subtract(initialMidpoint)
+                );
+                checkFloorCollision();
             }
         }
 
-        if (isScaling && leftController && rightController && pickedMesh) {
-            const leftPosition = leftController.grip.position;
-            const rightPosition = rightController.grip.position;
-            const currentDistance = BABYLON.Vector3.Distance(leftPosition, rightPosition);
-            if (initialDistance && initialScale) {
-                const scaleFactor = currentDistance / initialDistance;
-                pickedMesh.scaling = initialScale.multiply(new BABYLON.Vector3(scaleFactor, scaleFactor, scaleFactor));
+
+
+
+
+        // 4. Handle Button Inputs for Opacity and Slider
+        let changed = false;
+        if (leftController && leftController.motionController) {
+            const xButton = leftController.motionController.getComponent('x-button');
+            const yButton = leftController.motionController.getComponent('y-button');
+            
+            if (xButton && xButton.pressed) {
+                state.groupAlphaMultiplier = Math.max(0.0, Math.min(1.0, state.groupAlphaMultiplier - 0.015));
+                changed = true;
+            }
+            if (yButton && yButton.pressed) {
+                state.groupAlphaMultiplier = Math.max(0.0, Math.min(1.0, state.groupAlphaMultiplier + 0.015));
+                changed = true;
             }
         }
 
-        if (isFlying) {
-            const xrCamera = xrHelper.baseExperience.camera;
-            const forward = xrCamera.getDirection(BABYLON.Vector3.Forward()).scale(flightSpeed);
-            xrCamera.position.addInPlace(forward);
+        if (rightController && rightController.motionController) {
+            const aButton = rightController.motionController.getComponent('a-button');
+            const bButton = rightController.motionController.getComponent('b-button');
+            
+            if (aButton && aButton.pressed) {
+                state.zClip = Math.max(-1.5, Math.min(1.5, state.zClip - 0.03));
+                changed = true;
+            }
+            if (bButton && bButton.pressed) {
+                state.zClip = Math.max(-1.5, Math.min(1.5, state.zClip + 0.03));
+                changed = true;
+            }
         }
 
-        if (isGlobalScaling) {
-            updateGlobalScaling(leftController, rightController);
+        if (changed) {
+            if (state.clipPlaneSliderLeft) state.clipPlaneSliderLeft.position.z = state.zClip;
+            if (state.clipPlaneSliderRight) state.clipPlaneSliderRight.position.z = state.zClip;
+            if (state.clipPlaneMesh) state.clipPlaneMesh.position.z = state.zClip;
+            if (state.applyClippingCallback) {
+                state.applyClippingCallback();
+            }
         }
+
+
     });
 
+    // Setup input events for XR controllers
     xrHelper.input.onControllerAddedObservable.add((controller) => {
         controller.onMotionControllerInitObservable.add((motionController) => {
-            const triggerComponent = motionController.getComponent('xr-standard-trigger');
             const squeezeComponent = motionController.getComponent('xr-standard-squeeze');
-            const menuComponent = motionController.getComponent('x-button');
-            const flightComponent = motionController.getComponent('y-button');
-            const aComponent = motionController.getComponent('a-button');
+            const yButtonComponent = motionController.getComponent('y-button');
+            const xButtonComponent = motionController.getComponent('x-button');
 
-            const profileId = motionController.profileId;
-            BABYLON.SceneLoader.ImportMesh("", "https://controllers.babylonjs.com/", `${profileId}.glb`, scene, (meshes) => {
+            // Apply custom material/glow once model is loaded automatically
+            motionController.onModelLoadedObservable.add((mc) => {
+                const meshes = mc.rootMesh.getChildMeshes(false);
                 meshes.forEach(mesh => {
-                    mesh.parent = motionController.rootMesh;
                     const emissiveMaterial = new BABYLON.StandardMaterial("emissiveMaterial", scene);
-                    emissiveMaterial.emissiveColor = new BABYLON.Color3(1, 1, 1);
+                    emissiveMaterial.emissiveColor = new BABYLON.Color3(0.5, 0.5, 0.5);
                     mesh.material = emissiveMaterial;
                 });
             });
@@ -161,264 +138,36 @@ export async function setupControllers(scene, xrHelper, panel, anchor, ground) {
             if (motionController.handness === 'left') {
                 leftController = controller;
 
-                if (menuComponent) {
-                    menuComponent.onButtonStateChangedObservable.add(() => {
-                        if (menuComponent.pressed) {
-                            isPanelVisible = !isPanelVisible;
-                            if (isPanelVisible) {
-                                updatePanelPosition();
-                            }
-                            panel.isVisible = isPanelVisible;
-                            panel.children.forEach(button => {
-                                button.isVisible = isPanelVisible;
-                                button.isPickable = isPanelVisible;
-                            });
-                        }
-                    });
-                }
-
-                if (flightComponent) {
-                    flightComponent.onButtonStateChangedObservable.add(() => {
-                        if (flightComponent.pressed) {
-                            isFlying = !isFlying;
-                        }
-                    });
-                }
-
-                squeezeComponent.onButtonStateChangedObservable.add(() => {
-                    if (squeezeComponent.changes.pressed) {
-                        if (squeezeComponent.pressed) {
-                            if (draggingMesh) {
-                                directionSign *= -1;
-                            } else if (leftController && rightController && pickedMesh) {
-                                startScaling();
-                            }
-                        } else {
-                            if (!draggingMesh) {
-                                stopScaling();
-                            }
-                        }
-                    }
-                });
-
-                triggerComponent.onButtonStateChangedObservable.add(() => {
-                    if (triggerComponent.changes.pressed && triggerComponent.pressed) {
-                        if (isDragging) {
-                            isDragging = false;
-                            draggingMesh = null;
-                        } else {
-                            let mesh = scene.meshUnderPointer;
-                            if (xrHelper.pointerSelection.getMeshUnderPointer) {
-                                mesh = xrHelper.pointerSelection.getMeshUnderPointer(controller.uniqueId);
-                            }
-                            if (mesh && mesh !== ground) {
-                                const processed = Object.values(groupMeshes).some(entry => {
-                                    if (Array.isArray(entry)) {
-                                        return entry.some(sub => sub.parentNode === mesh.parent);
-                                    } else {
-                                        return entry.parentNode === mesh.parent;
-                                    }
-                                });
-                                if (processed) {
-                                    draggingMesh = mesh.parent;
-                                    isDragging = true;
-                                }
-                            }
-                        }
-                    }
-                });
-            } else if (motionController.handness === 'right') {
+            } else {
                 rightController = controller;
-
-                triggerComponent.onButtonStateChangedObservable.add(() => {
-                    if (triggerComponent.changes.pressed) {
-                        if (triggerComponent.pressed) {
-                            let mesh = scene.meshUnderPointer;
-                            if (xrHelper.pointerSelection.getMeshUnderPointer) {
-                                mesh = xrHelper.pointerSelection.getMeshUnderPointer(controller.uniqueId);
-                            }
-                            if (mesh === ground) {
-                                return;
-                            }
-
-                            const foundGroup = Object.keys(groupMeshes).find(g => {
-                                const entry = groupMeshes[g];
-                                if (Array.isArray(entry)) {
-                                    return entry.some(sub =>
-                                        sub.parentNode === mesh ||
-                                        sub.LineSystem === mesh ||
-                                        sub.ribbon === mesh
-                                    );
-                                } else {
-                                    return entry.parentNode === mesh ||
-                                           entry.LineSystem === mesh ||
-                                           entry.ribbon === mesh;
-                                }
-                            });
-
-                            if (foundGroup) {
-                                const entry = groupMeshes[foundGroup];
-                                if (Array.isArray(entry)) {
-                                    const subItem = entry.find(sub =>
-                                        sub.parentNode === mesh ||
-                                        sub.LineSystem === mesh ||
-                                        sub.ribbon === mesh
-                                    );
-                                    if (subItem) {
-                                        pickedMesh = subItem.parentNode;
-                                    }
-                                } else {
-                                    pickedMesh = entry.parentNode;
-                                }
-                                if (pickedMesh) {
-                                    originalParent = pickedMesh.parent;
-                                    pickedMesh.setParent(motionController.rootMesh);
-                                }
-                            }
-                        } else {
-                            if (pickedMesh) {
-                                pickedMesh.setParent(originalParent);
-                                pickedMesh = null;
-                            }
-                        }
-                    }
-                });
-
-                squeezeComponent.onButtonStateChangedObservable.add(() => {
-                    if (squeezeComponent.changes.pressed) {
-                        if (squeezeComponent.pressed) {
-                            const leftTrigger = leftController.motionController.getComponent('xr-standard-trigger');
-                            if (leftTrigger && leftTrigger.pressed) {
-                                startGlobalScaling(leftController, rightController);
-                            }
-                            else if (draggingMesh) {
-                                movementAxis = (movementAxis === 'z') ? 'x' : 'z';
-                            }
-                        } else {
-                            if (isGlobalScaling) {
-                                stopGlobalScaling();
-                            }
-                        }
-                    }
-                });
-
-                aComponent.onButtonStateChangedObservable.add(() => {
-                    if (aComponent.pressed) {
-                        isOffset = !isOffset;
-                        const groups = Object.keys(groupMeshes);
-
-                        if (currentDataset === 'WeatherDetailed') {
-                            const dsColors = datasetConfig[currentDataset].colors;
-                            const mid = (dsColors.length - 1) / 2;
-                            groups.forEach((groupName, i) => {
-                                const colorIndex = i % dsColors.length;
-                                const offset = (colorIndex - mid) * offsetValue;
-                                const entry = groupMeshes[groupName];
-                                const updateMeshOffset = (parentNode, key) => {
-                                    if (!originalPositions[groupName]) {
-                                        originalPositions[groupName] = {};
-                                    }
-                                    if (originalPositions[groupName][key] === undefined) {
-                                        originalPositions[groupName][key] = parentNode.position.x;
-                                    }
-                                    parentNode.position.x = isOffset ?
-                                        originalPositions[groupName][key] + offset :
-                                        originalPositions[groupName][key];
-                                };
-                                if (Array.isArray(entry)) {
-                                    entry.forEach((subGroup, j) => {
-                                        if (Array.isArray(subGroup)) {
-                                            subGroup.forEach((meshObj, k) => {
-                                                if (meshObj.parentNode) {
-                                                    updateMeshOffset(meshObj.parentNode, `${j}-${k}`);
-                                                }
-                                            });
-                                        } else {
-                                            if (subGroup.parentNode) {
-                                                updateMeshOffset(subGroup.parentNode, `${j}-0`);
-                                            }
-                                        }
-                                    });
-                                } else {
-                                    if (entry.parentNode) {
-                                        updateMeshOffset(entry.parentNode, `0-0`);
-                                    }
-                                }
-                            });
-                        } else {
-                            const indexOffset = (groups.length - 1) / 2;
-                            const handleOffsetToggle = (parentNode, gName, i, j, k, idxOffset) => {
-                                const calculatedOffset = (i - idxOffset) * offsetValue + (j * offsetValue) + (k * offsetValue);
-                                if (!originalPositions[gName]) {
-                                    originalPositions[gName] = {};
-                                }
-                                const key = `${j}-${k}`;
-                                if (originalPositions[gName][key] === undefined) {
-                                    originalPositions[gName][key] = parentNode.position.x;
-                                }
-                                parentNode.position.x = isOffset ?
-                                    originalPositions[gName][key] + calculatedOffset :
-                                    originalPositions[gName][key];
-                            };
-
-                            groups.forEach((groupName, i) => {
-                                const groupEntry = groupMeshes[groupName];
-                                if (Array.isArray(groupEntry)) {
-                                    groupEntry.forEach((subGroup, j) => {
-                                        if (Array.isArray(subGroup)) {
-                                            subGroup.forEach((meshObj, k) => {
-                                                if (meshObj.parentNode) {
-                                                    handleOffsetToggle(meshObj.parentNode, groupName, i, j, k, indexOffset);
-                                                }
-                                            });
-                                        } else {
-                                            if (subGroup.parentNode) {
-                                                handleOffsetToggle(subGroup.parentNode, groupName, i, j, 0, indexOffset);
-                                            }
-                                        }
-                                    });
-                                } else {
-                                    if (groupEntry.parentNode) {
-                                        handleOffsetToggle(groupEntry.parentNode, groupName, i, 0, 0, indexOffset);
-                                    }
-                                }
-                            });
-                        }
-                    }
-                });
-                function handleOffsetToggle(parentNode, gName, i, j, k, indexOffset) {
-                    const calculatedOffset = (i - indexOffset) * offsetValue + (j * offsetValue) + (k * offsetValue);
-                    if (!originalPositions[gName]) {
-                        originalPositions[gName] = {};
-                    }
-                    const key = `${j}-${k}`;
-                    if (originalPositions[gName][key] === undefined) {
-                        originalPositions[gName][key] = parentNode.position.x;
-                    }
-                    parentNode.position.x = isOffset ?
-                        originalPositions[gName][key] + calculatedOffset :
-                        originalPositions[gName][key];
-                }
             }
+
+            // Squeeze: pinch-to-scale setup
+            squeezeComponent.onButtonStateChangedObservable.add(() => {
+                if (squeezeComponent.changes.pressed) {
+                    if (squeezeComponent.pressed) {
+                        // Start pinch-to-scale when both controllers are squeezing
+                        if (leftController && rightController &&
+                            leftController.motionController.getComponent('xr-standard-squeeze').pressed &&
+                            rightController.motionController.getComponent('xr-standard-squeeze').pressed) {
+
+                            isSqueezingScale = true;
+                            const leftPos = leftController.grip.position;
+                            const rightPos = rightController.grip.position;
+                            initialMidpoint = BABYLON.Vector3.Center(leftPos, rightPos);
+                            initialDistance = BABYLON.Vector3.Distance(leftPos, rightPos);
+                            initialContainerScale = state.visualizationContainer.scaling.clone();
+                            initialContainerPos = state.visualizationContainer.position.clone();
+                        }
+                    } else {
+                        isSqueezingScale = false;
+                    }
+                }
+            });
+
+
         });
     });
 
-    const offsetSlider = document.getElementById('offsetSlider');
-    const flightSpeedSlider = document.getElementById('flightSpeedSlider');
-    const dragSpeedSlider = document.getElementById('dragSpeedSlider');
 
-    if (offsetSlider) {
-        offsetSlider.value = offsetValue;
-        offsetSlider.oninput = () => { offsetValue = parseFloat(offsetSlider.value); };
-    }
-
-    if (flightSpeedSlider) {
-        flightSpeedSlider.value = flightSpeed;
-        flightSpeedSlider.oninput = () => { flightSpeed = parseFloat(flightSpeedSlider.value); };
-    }
-
-    if (dragSpeedSlider) {
-        dragSpeedSlider.value = dragSpeed;
-        dragSpeedSlider.oninput = () => { dragSpeed = parseFloat(dragSpeedSlider.value); };
-    }
 }
