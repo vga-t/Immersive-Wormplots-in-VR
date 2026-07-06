@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { currentDataset } from './ui.js';
 import { datasetConfig } from './config.js';
-import { updateAllGroupMeshUniforms } from './helpers.js';
+import { updateAllGroupMeshUniforms, moveToPreviousTimestamp, moveToNextTimestamp } from './helpers.js';
 
 export async function setupControllers(scene, xrHelper, ground) {
     let leftController = null;
@@ -83,33 +83,16 @@ export async function setupControllers(scene, xrHelper, ground) {
             const yButton = leftController.motionController.getComponent('y-button');
             
             if (xButton && xButton.pressed) {
-                state.groupAlphaMultiplier = Math.max(0.0, Math.min(1.0, state.groupAlphaMultiplier - 0.015));
+                state.groupAlphaMultiplier = Math.max(0.0, Math.min(1.0, state.groupAlphaMultiplier - 0.003));
                 changed = true;
             }
             if (yButton && yButton.pressed) {
-                state.groupAlphaMultiplier = Math.max(0.0, Math.min(1.0, state.groupAlphaMultiplier + 0.015));
-                changed = true;
-            }
-        }
-
-        if (rightController && rightController.motionController) {
-            const aButton = rightController.motionController.getComponent('a-button');
-            const bButton = rightController.motionController.getComponent('b-button');
-            
-            if (aButton && aButton.pressed) {
-                state.zClip = Math.max(-1.5, Math.min(1.5, state.zClip - 0.03));
-                changed = true;
-            }
-            if (bButton && bButton.pressed) {
-                state.zClip = Math.max(-1.5, Math.min(1.5, state.zClip + 0.03));
+                state.groupAlphaMultiplier = Math.max(0.0, Math.min(1.0, state.groupAlphaMultiplier + 0.003));
                 changed = true;
             }
         }
 
         if (changed) {
-            if (state.clipPlaneSliderLeft) state.clipPlaneSliderLeft.position.z = state.zClip;
-            if (state.clipPlaneSliderRight) state.clipPlaneSliderRight.position.z = state.zClip;
-            if (state.clipPlaneMesh) state.clipPlaneMesh.position.z = state.zClip;
             if (state.applyClippingCallback) {
                 state.applyClippingCallback();
             }
@@ -140,6 +123,24 @@ export async function setupControllers(scene, xrHelper, ground) {
 
             } else {
                 rightController = controller;
+
+                const aButtonComponent = motionController.getComponent('a-button');
+                const bButtonComponent = motionController.getComponent('b-button');
+
+                if (aButtonComponent) {
+                    aButtonComponent.onButtonStateChangedObservable.add((component) => {
+                        if (component.changes.pressed && component.pressed) {
+                            moveToPreviousTimestamp();
+                        }
+                    });
+                }
+                if (bButtonComponent) {
+                    bButtonComponent.onButtonStateChangedObservable.add((component) => {
+                        if (component.changes.pressed && component.pressed) {
+                            moveToNextTimestamp();
+                        }
+                    });
+                }
             }
 
             // Squeeze: pinch-to-scale setup

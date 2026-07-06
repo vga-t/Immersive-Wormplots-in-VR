@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 750" width="100%" height="100%">
+  <defs>
+    <!-- Arrow marker for directional flow -->
+    <marker id="flow-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#6a737d"/>
+    </marker>
+  </defs>
+
+  <style>
+    .axis-line { stroke: #444444; stroke-width: 1.5; stroke-dasharray: 4,4; }
+    .projection-line { stroke: #888888; stroke-width: 1; stroke-dasharray: 2,2; }
+    .textbook-label { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 13px; fill: currentColor; }
+    .axis-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: bold; font-style: italic; fill: currentColor; }
+    .diagram-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; fill: currentColor; }
+    .vertex-node { fill: #005cc5; stroke: currentColor; stroke-width: 1.5; }
+    .center-intersection { fill: #22863a; stroke: currentColor; stroke-width: 1.5; }
+    
+    /* 2D Geometric Shell Styles */
+    .central-diamond { stroke: currentColor; stroke-width: 2.5; fill: none; }
+    .whisker-line { stroke: currentColor; stroke-width: 1.5; }
+    .whisker-boundary { stroke: currentColor; stroke-width: 2; }
+    
+    /* Marginal 1D Boxplot Styles */
+    .boxplot-rect { stroke: currentColor; stroke-width: 1.5; fill: none; }
+    .boxplot-line { stroke: currentColor; stroke-width: 1.5; }
+    .boxplot-median { stroke: #22863a; stroke-width: 2; }
+    
+    .flow-indicator { stroke: #6a737d; stroke-width: 1; fill: none; stroke-dasharray: 3,3; }
+  </style>
+
+  <!-- Main Diagram Title -->
+  <text x="450" y="35" text-anchor="middle" class="diagram-title">Mathematical Derivation of a 2D Diamond-Whisker Spacetime Cross-Section</text>
+
+  <!-- ========================================== -->
+  <!-- MARGINAL 1D BOXPLOT: VARIABLE X (TOP) -->
+  <!-- ========================================== -->
+  <g transform="translate(0, 70)">
+    <!-- Whiskers -->
+    <line x1="210" y1="30" x2="690" y2="30" class="boxplot-line" />
+    <line x1="210" y1="20" x2="210" y2="40" class="boxplot-line" /> <!-- minX -->
+    <line x1="690" y1="20" x2="690" y2="40" class="boxplot-line" /> <!-- maxX -->
+    <!-- Interquartile Range Box -->
+    <rect x="300" y="15" width="300" height="30" class="boxplot-rect" /> <!-- Q1 to Q3 -->
+    <line x1="450" y1="15" x2="450" y2="45" class="boxplot-median" /> <!-- Median X -->
+    
+    <!-- Labels for X Boxplot -->
+    <text x="210" y="12" text-anchor="middle" class="textbook-label">Lower Fence (min_X)</text>
+    <text x="300" y="12" text-anchor="middle" class="textbook-label">Q1_X</text>
+    <text x="450" y="12" text-anchor="middle" class="textbook-label" font-weight="bold">Median_X</text>
+    <text x="600" y="12" text-anchor="middle" class="textbook-label">Q3_X</text>
+    <text x="690" y="12" text-anchor="middle" class="textbook-label">Upper Fence (max_X)</text>
+    <text x="70" y="35" class="axis-title">1D Boxplot (Variable X)</text>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- MARGINAL 1D BOXPLOT: VARIABLE Y (LEFT) -->
+  <!-- ========================================== -->
+  <g transform="translate(70, 0)">
+    <!-- Whiskers -->
+    <line x1="30" y1="230" x2="30" y2="590" class="boxplot-line" />
+    <line x1="20" y1="230" x2="40" y2="230" class="boxplot-line" /> <!-- minY -->
+    <line x1="20" y1="590" x2="40" y2="590" class="boxplot-line" /> <!-- maxY -->
+    <!-- Interquartile Range Box -->
+    <rect x="15" y="320" width="30" height="180" class="boxplot-rect" /> <!-- Q1 to Q3 -->
+    <line x1="15" y1="410" x2="45" y2="410" class="boxplot-median" /> <!-- Median Y -->
+    
+    <!-- Labels for Y Boxplot -->
+    <text x="5" y="234" text-anchor="end" class="textbook-label">Lower Fence (min_Y)</text>
+    <text x="5" y="324" text-anchor="end" class="textbook-label">Q1_Y</text>
+    <text x="5" y="414" text-anchor="end" class="textbook-label" font-weight="bold">Median_Y</text>
+    <text x="5" y="504" text-anchor="end" class="textbook-label">Q3_Y</text>
+    <text x="5" y="594" text-anchor="end" class="textbook-label">Upper Fence (max_Y)</text>
+    <text x="30" y="180" text-anchor="middle" class="axis-title">1D Boxplot (Variable Y)</text>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- CENTRAL 2D DIAMOND-WHISKER GEOMETRY -->
+  <!-- ========================================== -->
+  
+  <!-- Geometric Projections from 1D Boxplots to 2D Space -->
+  <!-- Vertical projections from X Boxplot -->
+  <line x1="210" y1="115" x2="210" y2="410" class="projection-line" />
+  <line x1="300" y1="115" x2="300" y2="410" class="projection-line" />
+  <line x1="450" y1="115" x2="450" y2="590" class="projection-line" />
+  <line x1="600" y1="115" x2="600" y2="410" class="projection-line" />
+  <line x1="690" y1="115" x2="690" y2="410" class="projection-line" />
+
+  <!-- Horizontal projections from Y Boxplot -->
+  <line x1="115" y1="230" x2="450" y2="230" class="projection-line" />
+  <line x1="115" y1="320" x2="450" y2="320" class="projection-line" />
+  <line x1="115" y1="410" x2="690" y2="410" class="projection-line" />
+  <line x1="115" y1="500" x2="450" y2="500" class="projection-line" />
+  <line x1="115" y1="590" x2="450" y2="590" class="projection-line" />
+
+  <!-- Orthogonal Underlying Axes of Central Tendency -->
+  <line x1="150" y1="410" x2="750" y2="410" class="axis-line" />
+  <line x1="450" y1="150" x2="450" y2="650" class="axis-line" />
+
+  <!-- Central 2D IQR Diamond Perimeter (Connecting Joint Quartiles) -->
+  <polygon points="450,320 300,410 450,500 600,410" class="central-diamond" />
+
+  <!-- Vertex-Anchored Whiskers extending to Tukey Adjacent Boundaries -->
+  <line x1="450" y1="320" x2="450" y2="230" class="whisker-line" /> <!-- Top vertical segment -->
+  <line x1="435" y1="230" x2="465" y2="230" class="whisker-boundary" />
+  
+  <line x1="450" y1="500" x2="450" y2="590" class="whisker-line" /> <!-- Bottom vertical segment -->
+  <line x1="435" y1="590" x2="465" y2="590" class="whisker-boundary" />
+
+  <line x1="300" y1="410" x2="210" y2="410" class="whisker-line" /> <!-- Left horizontal segment -->
+  <line x1="210" y1="395" x2="210" y2="425" class="whisker-boundary" />
+
+  <line x1="600" y1="410" x2="690" y2="410" class="whisker-line" /> <!-- Right horizontal segment -->
+  <line x1="690" y1="395" x2="690" y2="425" class="whisker-boundary" />
+
+  <!-- Structural Reference Intersections (Nodes) -->
+  
+  <!-- Central Median Intersection -->
+  <circle cx="450" cy="410" r="4.5" class="center-intersection" />
+  <text x="462" y="403" class="textbook-label" font-weight="bold">(Median_X, Median_Y)</text>
+
+  <!-- Diamond Vertex Points -->
+  <circle cx="450" cy="320" r="5" class="vertex-node" />
+  <text x="462" y="315" class="textbook-label" font-weight="bold" fill="#005cc5">Vertex A: (Median_X, Q1_Y)</text>
+
+  <circle cx="300" cy="410" r="5" class="vertex-node" />
+  <text x="260" y="390" class="textbook-label" font-weight="bold" fill="#005cc5">Vertex B: (Q1_X, Median_Y)</text>
+
+  <circle cx="450" cy="500" r="5" class="vertex-node" />
+  <text x="462" y="520" class="textbook-label" font-weight="bold" fill="#005cc5">Vertex C: (Median_X, Q3_Y)</text>
+
+  <circle cx="600" cy="410" r="5" class="vertex-node" />
+  <text x="610" y="390" class="textbook-label" font-weight="bold" fill="#005cc5">Vertex D: (Q3_X, Median_Y)</text>
+
+  <!-- Whisker Terminuses -->
+  <circle cx="450" cy="230" r="4" class="vertex-node" />
+  <text x="462" y="245" class="textbook-label">(Median_X, min_Y)</text>
+
+  <circle cx="210" cy="410" r="4" class="vertex-node" />
+  <text x="180" y="435" class="textbook-label" text-anchor="middle">(min_X, Median_Y)</text>
+
+  <circle cx="450" cy="590" r="4" class="vertex-node" />
+  <text x="462" y="585" class="textbook-label">(Median_X, max_Y)</text>
+
+  <circle cx="690" cy="410" r="4" class="vertex-node" />
+  <text x="700" y="435" class="textbook-label">(max_X, Median_Y)</text>
+
+  <!-- Structural Clockwise Perimeter Path Tracing Indicators -->
+  <path d="M 465,335 Q 535,360 585,395" class="flow-indicator" marker-end="url(#flow-arrow)" />
+  <path d="M 585,425 Q 535,460 465,485" class="flow-indicator" marker-end="url(#flow-arrow)" />
+  <path d="M 435,485 Q 365,460 315,425" class="flow-indicator" marker-end="url(#flow-arrow)" />
+  <path d="M 315,395 Q 365,360 435,335" class="flow-indicator" marker-end="url(#flow-arrow)" />
+</svg>

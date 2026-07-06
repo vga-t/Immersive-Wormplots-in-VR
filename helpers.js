@@ -1,43 +1,4 @@
 import { state } from './state.js';
-import { datasetConfig } from './config.js';
-import { currentDataset } from './ui.js';
-
-export function extractRawData(df, currentDataset, attribute1, attribute2) {
-    const cfg = datasetConfig[currentDataset];
-    const wormName = cfg.wormName;
-    const TimeAttribute = cfg.timeAttribute;
-    const Groups = df[wormName].unique().values;
-
-    const datasetData = {
-        groups: [],
-        colors: cfg.colors.map(c => ({ r: c.r, g: c.g, b: c.b }))
-    };
-
-    for (let Group of Groups) {
-        let filteredDf = df.loc({ rows: df[wormName].eq(Group), columns: [TimeAttribute, attribute1, attribute2] });
-        let groupedDf = filteredDf.groupby([TimeAttribute]);
-        const timeSeries = [];
-
-        for (let timeStamp of filteredDf[TimeAttribute].unique().values) {
-            const groupData = groupedDf.getGroup([timeStamp]);
-            if (groupData) {
-                const valuesX = groupData[attribute1].values;
-                const valuesY = groupData[attribute2].values;
-                timeSeries.push({
-                    timeStamp: Number(timeStamp),
-                    valuesX,
-                    valuesY
-                });
-            }
-        }
-        datasetData.groups.push({
-            group: Group,
-            timeSeries
-        });
-    }
-
-    return datasetData;
-}
 
 export function connectPoints(points, scene, color, group, parentNode, zClip) {
     const diamondLines = [];
@@ -218,3 +179,49 @@ export function updateAllGroupMeshUniforms() {
         }
     });
 }
+
+export function moveToPreviousTimestamp() {
+    if (!state.uniqueLocalTimestamps || state.uniqueLocalTimestamps.length === 0) return;
+    const EPSILON = 0.0001;
+    let targetZ = state.uniqueLocalTimestamps[0];
+    let found = false;
+    for (let i = state.uniqueLocalTimestamps.length - 1; i >= 0; i--) {
+        if (state.uniqueLocalTimestamps[i] < state.zClip - EPSILON) {
+            targetZ = state.uniqueLocalTimestamps[i];
+            found = true;
+            break;
+        }
+    }
+    if (found) {
+        state.zClip = targetZ;
+        updateZClipUIAndApply();
+    }
+}
+
+export function moveToNextTimestamp() {
+    if (!state.uniqueLocalTimestamps || state.uniqueLocalTimestamps.length === 0) return;
+    const EPSILON = 0.0001;
+    let targetZ = state.uniqueLocalTimestamps[state.uniqueLocalTimestamps.length - 1];
+    let found = false;
+    for (let i = 0; i < state.uniqueLocalTimestamps.length; i++) {
+        if (state.uniqueLocalTimestamps[i] > state.zClip + EPSILON) {
+            targetZ = state.uniqueLocalTimestamps[i];
+            found = true;
+            break;
+        }
+    }
+    if (found) {
+        state.zClip = targetZ;
+        updateZClipUIAndApply();
+    }
+}
+
+function updateZClipUIAndApply() {
+    if (state.clipPlaneSliderLeft) state.clipPlaneSliderLeft.position.z = state.zClip;
+    if (state.clipPlaneSliderRight) state.clipPlaneSliderRight.position.z = state.zClip;
+    if (state.clipPlaneMesh) state.clipPlaneMesh.position.z = state.zClip;
+    if (state.applyClippingCallback) {
+        state.applyClippingCallback();
+    }
+}
+

@@ -1,7 +1,7 @@
 import { currentDataset, attribute1, attribute2, setupUI } from './ui.js';
 import { datasetConfig } from './config.js';
 import { setupControllers } from './controllers.js';
-import { extractRawData, connectPoints, updatePoints, clearGroupMeshes, updateAllGroupMeshUniforms } from './helpers.js';
+import { connectPoints, updatePoints, clearGroupMeshes, updateAllGroupMeshUniforms, moveToPreviousTimestamp, moveToNextTimestamp } from './helpers.js';
 import { state } from './state.js';
 
 let engine, camera, lights, xrHelper;
@@ -101,23 +101,15 @@ export async function initializeScene() {
         let changed = false;
         const key = evt.key.toLowerCase();
         if (key === "w") {
-            state.groupAlphaMultiplier = Math.min(1.0, state.groupAlphaMultiplier + 0.05);
+            state.groupAlphaMultiplier = Math.min(1.0, state.groupAlphaMultiplier + 0.01);
             changed = true;
         } else if (key === "q") {
-            state.groupAlphaMultiplier = Math.max(0.0, state.groupAlphaMultiplier - 0.05);
+            state.groupAlphaMultiplier = Math.max(0.0, state.groupAlphaMultiplier - 0.01);
             changed = true;
         } else if (key === "e") {
-            state.zClip = Math.max(-1.5, state.zClip - 0.05);
-            if (state.clipPlaneSliderLeft) state.clipPlaneSliderLeft.position.z = state.zClip;
-            if (state.clipPlaneSliderRight) state.clipPlaneSliderRight.position.z = state.zClip;
-            if (state.clipPlaneMesh) state.clipPlaneMesh.position.z = state.zClip;
-            changed = true;
+            moveToPreviousTimestamp();
         } else if (key === "r") {
-            state.zClip = Math.min(1.5, state.zClip + 0.05);
-            if (state.clipPlaneSliderLeft) state.clipPlaneSliderLeft.position.z = state.zClip;
-            if (state.clipPlaneSliderRight) state.clipPlaneSliderRight.position.z = state.zClip;
-            if (state.clipPlaneMesh) state.clipPlaneMesh.position.z = state.zClip;
-            changed = true;
+            moveToNextTimestamp();
         }
 
         if (changed) {
@@ -205,32 +197,25 @@ function createBoundaryVolume() {
 
     // EdgesRenderer for clean 12-edge cuboid wireframe with soft glow
     state.boundaryVolume.enableEdgesRendering();
-    state.boundaryVolume.edgesWidth = 2.0;
-    state.boundaryVolume.edgesColor = new BABYLON.Color4(0.0, 0.8, 1.0, 0.8);
-}
-
-async function loadCSVData(currentDataset) {
-    try {
-        const cfg = datasetConfig[currentDataset];
-        const df = await dfd.readCSV(cfg.file);
-        return df;
-    } catch (error) {
-        console.error('Error loading CSV:', error);
-        return null;
-    }
+    state.boundaryVolume.edgesWidth = 1.0;
+    state.boundaryVolume.edgesColor = new BABYLON.Color4(0.0, 0.8, 1.0, 0.10);
 }
 
 export async function loadAndRenderDataset() {
     if (!isInitialized) return; // Guard against premature calls during init
 
-    const df = await loadCSVData(currentDataset);
-    if (!df) return;
-
-    const datasetData = extractRawData(df, currentDataset, attribute1, attribute2);
+    const cfg = datasetConfig[currentDataset];
+    // Resolve the relative file path to an absolute URL so the worker can load it correctly
+    const fileUrl = new URL(cfg.file, window.location.href).href;
 
     worker.postMessage({
         requestId: Date.now().toString(),
-        dataset: datasetData
+        fileUrl: fileUrl,
+        wormName: cfg.wormName,
+        timeAttribute: cfg.timeAttribute,
+        colors: cfg.colors.map(c => ({ r: c.r, g: c.g, b: c.b })),
+        attribute1: attribute1,
+        attribute2: attribute2
     });
 }
 

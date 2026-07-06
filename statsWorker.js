@@ -1,8 +1,18 @@
-self.onmessage = (event) => {
-    const { requestId, dataset } = event.data;
+importScripts("https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js");
+
+self.onmessage = async (event) => {
+    const { requestId, fileUrl, wormName, timeAttribute, colors, attribute1, attribute2 } = event.data;
 
     try {
-        const result = computeDataset(dataset);
+        // Load the CSV data in the worker using Danfo.js
+        const df = await self.dfd.readCSV(fileUrl);
+
+        // Extract raw data from df inside the worker
+        const datasetData = extractRawDataInWorker(df, wormName, timeAttribute, colors, attribute1, attribute2);
+
+        // Compute the box plot stats and coordinate mappings inside the worker
+        const result = computeDataset(datasetData);
+
         self.postMessage({ requestId, ok: true, result });
     } catch (error) {
         self.postMessage({
@@ -12,6 +22,41 @@ self.onmessage = (event) => {
         });
     }
 };
+
+function extractRawDataInWorker(df, wormName, timeAttribute, colors, attribute1, attribute2) {
+    const Groups = df[wormName].unique().values;
+
+    const datasetData = {
+        groups: [],
+        colors: colors
+    };
+
+    for (let Group of Groups) {
+        let filteredDf = df.loc({ rows: df[wormName].eq(Group), columns: [timeAttribute, attribute1, attribute2] });
+        let groupedDf = filteredDf.groupby([timeAttribute]);
+        const timeSeries = [];
+
+        for (let timeStamp of filteredDf[timeAttribute].unique().values) {
+            const groupData = groupedDf.getGroup([timeStamp]);
+            if (groupData) {
+                const valuesX = groupData[attribute1].values;
+                const valuesY = groupData[attribute2].values;
+                timeSeries.push({
+                    timeStamp: Number(timeStamp),
+                    valuesX,
+                    valuesY
+                });
+            }
+        }
+        datasetData.groups.push({
+            group: Group,
+            timeSeries
+        });
+    }
+
+    return datasetData;
+}
+
 
 function computeDataset(dataset) {
     const groups = [];
